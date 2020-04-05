@@ -31,6 +31,8 @@ int main (int argc, char *argv[]) {
         exit(1);
     }
 
+    printf("Current directory: %s\n", buffer);
+
     // check if the current process's working directory is a sub directory of
     // the user's home directory
     int subDir = strncmp(buffer, homeDir, strlen(homeDir));
