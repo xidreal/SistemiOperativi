@@ -25,28 +25,31 @@ int main (int argc, char *argv[]) {
         }
         case 0: {
             // close the standard output and error stream
-            //...
+            close(STDERR_FILENO);
+            close(STDOUT_FILENO);
 
             // create a new file. The value returned by open will be 1 as it is
             // lowest available index
-            int fd = //...
+            int fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, S_IWUSR | S_IRUSR );
             if (fd == -1)
                 errExit("open failed");
 
+            printf("number of fd: %i", fd);
             // clone the file descriptor 1. The value returned by dup will be 2
             // as it is  lowest available index
-            //...
+            dup(fd);
 
             // both file descriptors 1 and 2 are pointing to the created file now.
 
             // replace the current process image with a new process image
-            //...
+            execvp(argv[1], &argv[1]);
             errExit("execvp failed");
         }
         default: {
             int status;
             // wait the termination of the child process
-            // ...
+            if ((wait(status)) == -1)
+                errExit("wait failed");
 
             printf("Command %s exited with status %d\n", argv[1], WEXITSTATUS(status));
         }
