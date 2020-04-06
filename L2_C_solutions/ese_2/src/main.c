@@ -31,19 +31,20 @@ int main (int argc, char *argv[]) {
         int code = (int)(((double)rand() / RAND_MAX) * 255);
 
         // generate a subprocess
-        pid = //...
+        pid = fork();
         // both child and parent processes are here!
-        if (pid == -1)
+        if (pid == -1){
             printf("child %d not created!", i);
-        else if (/*...*/) {
-            printf("PID: %d , PPID: %d. Exit code: %d\n", /*...*/);
+        } else if (pid == 0) {
+            printf("PID: %d , PPID: %d. Exit code: %d\n", getpid(), getppid(), code);
             exit(code); // <- child process must stop here!
         }
     }
     // parent process must run here!
-
+    int status = 0;
     // get termination status of each created subprocess.
-    // ...
+    while((pid = wait(&status)) != -1)
+        printf("Child %d exited, status = %d\n", pid, WEXITSTATUS(status));
 
-    return 0;
+    return 0; 
 }
