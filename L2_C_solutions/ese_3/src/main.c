@@ -32,18 +32,25 @@ int main (int argc, char *argv[]) {
 
         // generate a subprocess
         pid = fork();
-        // same code of ese_2
+        if (pid == -1)
+            printf("child %d not created!", i);
+        else if (pid == 0) {
+            printf("PID: %d , PPID: %d. Exit code: %d\n",
+                    getpid(), getppid(), code);
+            exit(code);
+        }
 
     }
 
+    int status, res;
     // get the termination status of the last created subprocess.
     do {
-        res = waitpid(/*...*/);
+        res = waitpid(pid, &status, WNOHANG);
         if (res == -1)
             errExit("waitpid failed");
     } while (res == 0);
 
-    printf("Child %d exited, status=%d\n", /*...*/);
+    printf("Child %d exited, status=%d\n", res, WEXITSTATUS(status));
 
     return 0;
 }
