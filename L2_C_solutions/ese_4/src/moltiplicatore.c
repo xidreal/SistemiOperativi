@@ -8,9 +8,11 @@ int main (int argc, char *argv[]) {
         return 1;
     }
 
-    // ...
+    int n = atoi(argv[1]);
+    int m = atoi(argv[2]);
 
-    printf("il prodotto di %d e %d e': %d\n", /*...*/;
-
+    printf("il prodotto di %d e %d e': %d\n", n, m, (n*m));
+    printf("il mio nome è : %s \n", argv[0]);
+    
     return 0;
 }
