@@ -9,16 +9,17 @@
 
 void consumer (int *pipeFD) {
     // close pipe's write end
-    // ...
+    if(close(pipeFD[1]) == -1)
+        errExit("error pipe close");
 
     ssize_t rB = -1;
     char buffer[MSG_BYTES + 1];
     do {
         // read max MSG_BYTES chars from the pipe
-        rB = // ...
-        if (/* ..*/)
+        rB = read(pipeFD[0], buffer, MSG_BYTES);
+        if (rB == -1)
             printf("<Consumer> it looks like the pipe is broken\n");
-        else if (/* ..*/)
+        else if (rB == 0)
             printf("<Consumer> it looks like all pipe's write ends were closed\n");
         else {
             buffer[rB] = '\0';
@@ -27,5 +28,6 @@ void consumer (int *pipeFD) {
     } while (rB > 0);
 
     // close pipe's read end
-    // ...
+    if(close(pipeFD[0]) == -1)
+        errExit("error pipe close");
 }
