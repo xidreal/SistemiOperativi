@@ -13,7 +13,8 @@ pid_t child1, child2;
 // The sigHandler is the signal handler for the signal SIGINT
 // The function gently terminates the two sub processes by sending SIGTERM
 void sigHandler(int sig) {
-    // ...
+    kill(child1, SIGTERM);
+    kill(child2, SIGTERM);
     // eventually, also the parent process termiantes
     exit(0);
 }
@@ -27,7 +28,8 @@ int main (int argc, char *argv[]) {
     if (child1 == 0) {
         // the infinite loop to simulate a working task
         while (1) {
-            // ...
+            sleep(3);
+            printf("Sono figlio1, sto giocando... \n");
         }
     }
 
@@ -43,12 +45,13 @@ int main (int argc, char *argv[]) {
             sleep(10);
             printf("Sono figlio2, disturbo figlio1...\n");
             // send SIGSTOP to child 1
-            // ...
+            if(kill(child1, SIGSTOP) == -1)
+                errExit("kill failed");
         }
     }
 
     // Set sigHandler as handler to manage SIGINT signal sent by user
-    if (/*...*/)
+    if (signal(SIGINT, sigHandler) == SIG_ERR)
         errExit("change signal handler failed");
 
     int status;
@@ -57,15 +60,16 @@ int main (int argc, char *argv[]) {
         // the normal execution of the working process (child1)
         sleep(15);
         // monitor status of child 1 (see waitpid options)
-        pid_t p = // ...
+        pid_t p = waitpid(child1, &status, WUNTRACED | WNOHANG);
 
-        if (p == -1)
+        if (p == -1){
             errExit("waitPid failed");
-        else if (/*...*/) {
+        } else if (p != 0 && WIFSTOPPED(status)) {
             // if child1 process is stopped, then the parent resumes it
             printf("<parent> Resume figlio1...\n");
             // send SIGCONT to child1
-            // ...
+            if (kill(child1, SIGCONT) == -1)
+                errExit("kill failed");
         }
     }
 
