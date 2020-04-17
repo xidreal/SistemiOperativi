@@ -9,28 +9,31 @@
 
 void consumer (int *pipeFD) {
     // close pipe's write end
-    // ...
+    if (close(pipeFD[1]) == -1)
+        errExit("close pipe failed");
 
     ssize_t rB = -1;
     char buffer[MSG_BYTES + 1];
     do {
         // first we read the 'size' field of an Item
         ssize_t size;
-        rB = // ...
-        if (/*...*/)
+        rB = read(pipeFD[0], &size, sizeof(ssize_t));
+        //printf("size: %ld\n", size);
+        if (rB == -1)
             printf("<Consumer> it looks like the pipe is broken\n");
-        else if (/*...*/)
+        else if (rB == 0)
             printf("<Consumer> it looks like all pipe's write ends were closed\n");
-        else if (/*...*/)
+        else if (rB != sizeof(ssize_t))
             printf("<Consumer> it looks like there is not ssize_t\n");
         else {
             // then, we read the 'value' field of an Item
-            rB = //...
-            if (/*...*/)
+            rB = read(pipeFD[0], buffer, size);
+            //printf("rB: %ld\n", rB);
+            if (rB == -1)
                 printf("<Consumer> it looks like the pipe is broken\n");
-            else if (/*...*/)
+            else if (rB == 0)
                 printf("<Consumer> it looks like all pipe's write ends were closed\n");
-            else if (/*...*/)
+            else if (rB != size)
                 printf("<Consumer> it looks like there is not \n");
             else {
                 buffer[size] = '\0';
@@ -40,5 +43,6 @@ void consumer (int *pipeFD) {
     } while (rB > 0);
 
     // close pipe's read end
-    // ...
+    if(close(pipeFD[0]) == -1)
+        errExit("close pipe failed");
 }

@@ -18,7 +18,8 @@ int main (int argc, char *argv[]) {
     int pipeFD[2];
 
     // Make a new PIPE
-    // ...
+    if(pipe(pipeFD) == -1)
+        printf("Error pipe");
 
     // Generate a sub process reading a text file token-by-token
     printf("<Consumer> making %d subprocesses...\n", (argc - 1));

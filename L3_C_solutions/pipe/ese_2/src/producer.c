@@ -18,35 +18,39 @@ struct Item {
 
 void producer (int *pipeFD, const char *filename) {
     // Close the read-end of the pipe
-    // ...
+    if (close(pipeFD[0]) == -1)
+        errExit("Error pipe closing");
 
     printf("<Producer> text file: %s\n", filename);
 
     // Open the text file in read only mode
-    int file = // ...
+    int file = open(filename, O_RDONLY);
 
     struct Item item;
     do {
         // read a chunk of bytes from file:
         // copy in item.value a chunk of bytes from the file, and
         // set item.size equal to the number of read bytes
-        // ...
+        item.size = read(file, item.value, sizeof(item.value));
         if (item.size == -1)
             errExit("read failed");
 
         if (item.size > 0) {
             // What is the righ size?
             // (size of a ssize_t and the number of read chars)
-            ssize_t bytes2send = // ...
+            ssize_t bytes2send = sizeof(item.size) + item.size;
+            printf("Lunghezza scrittra: %ld\n", bytes2send);
             // send struct item to Consumer through pipe
             ssize_t bW = write(pipeFD[1], &item, bytes2send);
             // check bW value
-            // ...
+            if(bW != bytes2send)
+                errExit("write failed");
         }
     } while (item.size > 0);
 
     // Close the write end of the pipe
-    // ...
+    if(close(pipeFD[1]) == -1 || close(file) == -1)
+        errExit("close failed");
 
     return;
 }
