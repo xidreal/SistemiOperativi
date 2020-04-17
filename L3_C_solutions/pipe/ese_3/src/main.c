@@ -29,7 +29,8 @@ int main (int argc, char *argv[]) {
     int pipe_child2parent[2];
 
     // Make new PIPEs
-    // ...
+    if(pipe(pipe_child2parent) == -1 || pipe(pipe_parent2child) == -1)
+        errExit("pipe failed");
 
     ssize_t rB, wB = -1;
     char buffer [5];
@@ -40,46 +41,60 @@ int main (int argc, char *argv[]) {
         case 0: {
             // close the write end of the pipe parent2child,
             // and the read end of the pipe child2parent
-            // ...
+            if(close(pipe_parent2child[1] == -1) || close(pipe_child2parent[0]) == -1)
+                errExit("close failed");
 
             char *pongText = "pong";
             ssize_t textSize = strlen(pongText) + 1;
             for (int i = 0; i < times; i++) {
                 // read 'ping' from the parent process
-                // ...
+                
+                rB = read(pipe_parent2child[0], buffer, sizeof(buffer));
+                if(rB <= 0)
+                    errExit("Child - read faile");
 
                 printf("%d - %s\n", (i + 1), buffer);
 
                 // write 'pong' to the parent process
-                // ...
+                wB = write(pipe_child2parent[1], pongText, textSize);
+                if(wB != textSize)
+                    errExit("child - write failed");
             }
 
             // close the read end of the pipe parent2child,
             // and the write end of the pipe child2paremt
-            // ...
+            if(close(pipe_parent2child[0]) == -1 || close(pipe_child2parent[1]) == -1)
+                errExit("close failed");
 
             _exit(0);
         }
         default: {
             // close the read end of the pipe parent2child,
             // and the write end of the pipe child2parent
-            // ...
+            if(close(pipe_parent2child[0] == -1) || close(pipe_child2parent[1]) == -1)
+                errExit("close failed");
 
             char *pingText = "ping";
             ssize_t textSize = strlen(pingText) + 1;
             for (int i = 0; i < times; i++) {
                 // write 'ping' to the child process
-                // ...
-
+                wB = write(pipe_parent2child[1], pingText, textSize);
+                if (wB != textSize)
+                    errExit("Parent - write failed");
                 // read 'pong' from the parent process
-                // ...
-
+            
+                rB = read(pipe_child2parent[0], buffer, sizeof(buffer));
+                if (rB <= 0)
+                    errExit("Parent - read failed");
                 printf("%d - %s\n", (i + 1), buffer);
             }
 
             // close the write end of the pipe parent2child,
             // and the read end of the pipe child2paremt
-            // ...
+            if(close(pipe_parent2child[1] == -1))
+                errExit("close failed");
+            if( close(pipe_child2parent[0]) == -1)
+                errExit("close failed 2");
         }
     }
     
