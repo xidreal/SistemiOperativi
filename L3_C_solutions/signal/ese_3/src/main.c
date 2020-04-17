@@ -20,7 +20,8 @@ void sigHandlerChild1(int sig) {
 void sigHandlerChild2(int sig) {
     if (sig == SIGUSR1) {
         printf("<child2> received SIGUSR1. Sending SIGUSR2 to parent\n");
-        //...
+        if(kill(getppid(), SIGUSR2) == -1)
+            errExit("kill failed");
         exit(0);
     }
 }
@@ -28,10 +29,12 @@ void sigHandlerChild2(int sig) {
 void sigHandlerParent(int sig) {
     if (sig == SIGUSR1) {
         printf("<parent> received SIGUSR1. Sending SIGUSR1 to child2\n");
-        //...
+        if(kill(child2, SIGUSR1) == -1)
+            errExit("kill failed");
     } else if (sig == SIGUSR2) {
         printf("<parent> received SIGUSR2. Sending SIGUSR2 to child1\n");
-        //...
+        if(kill(child1, SIGUSR2) == -1)
+            errExit("kill failed");
     }
 }
 
@@ -39,9 +42,9 @@ int main (int argc, char *argv[]) {
     // set of signals. Not initialized!
     sigset_t mySet;
     // initialize mySet to contain all signals
-    // ...
+    sigfillset(&mySet);
     // update signal mask to block all signals
-    // ...
+    sigprocmask(SIG_SETMASK, &mySet, NULL);
 
     // create the first process child (figlio1)
     child1 = fork();
@@ -54,19 +57,21 @@ int main (int argc, char *argv[]) {
         // child1 uses sigHandlerChild1 as handler for SIGUSR2,
         // which is blocked since the parent blocked all signals
         // Set sigHandlerChild1 as handler for SIGUSR2
-        // ...
+        if(signal(SIGUSR2, sigHandlerChild1) == SIG_ERR)
+            errExit("<child1> change signal handler failed");
 
         // remove SIGUSR2 to the list of blocked signals
-        // ...
+        sigdelset(&mySet, SIGUSR2);
 
         // update signal mask
-        // ...
+        if(sigprocmask(SIG_SETMASK, &mySet, NULL) == -1)
+            errExit("sigprocmask failed");
 
         printf("<child1> sending SIGUSR1 to parent\n");
 
         // send SIGUSR1 to parent process
-        // ...
-
+        if(kill(getppid(), SIGUSR1) == -1)
+            errExit("kill failed");
         // wait for SIGUSR2 signal, which could have already beed delivered!
         pause();
 
@@ -82,13 +87,15 @@ int main (int argc, char *argv[]) {
         // child2 uses sigHandlerChild2 as handler for SIGUSR1,
         // which is blocked since the parent blocked all signals
         // set sigHandlerChild2 as handler for SIGUSR1
-        // ...
+        if (signal(SIGUSR1, sigHandlerChild2) == SIG_ERR)
+            errExit("<child2> change signal handler failed");
 
         // remove SIGUSR1 from the list of blocked signals
-        // ...
+        sigdelset(&mySet, SIGUSR1);
 
         // update signal mask
-        // ...
+        if (sigprocmask(SIG_SETMASK, &mySet, NULL) == -1)
+            errExit("sigprocmask failed");
 
         // wait for SIGUSR1 signal, which could have already beed delivered!
         pause();
@@ -98,18 +105,23 @@ int main (int argc, char *argv[]) {
 
     // Code executed by parent task
     // set sigHandler as handler for SIGUSR1 and SIGUSR2
-    // ...
+    if (signal(SIGUSR1, sigHandlerParent) == SIG_ERR ||
+        signal(SIGUSR2, sigHandlerParent) == SIG_ERR)
+    { errExit("change signal handler failed"); }
 
     // remove SIGUSR1 and SIGUSR2 from mySet
-    // ...
+    sigdelset(&mySet, SIGUSR1);
+    sigdelset(&mySet, SIGUSR2);
 
     // update signal mask to block all signals but SIGUSR1 and SIGUSR2
-    // ...
+    if (sigprocmask(SIG_SETMASK, &mySet, NULL) == -1)
+        errExit("sigprocmask failed");
 
     // wait termination of both task children
-    // ...
+    int status;
+    while(wait(&status) != -1);
 
-    printf("Both the child processes are terminated\n");
+    printf("Both child processes are terminated\n");
 
     return 0;
 }
