@@ -10,7 +10,7 @@
 
 // The signal handler that will be used when the signal SIGINT
 // is delivered to the process
-/*...*/ sigHandler(/*...*/) {
+void sigHandler(int sig) {
     printf("Ctrl+C non mi puo' fermare!\n");
 }
 
@@ -18,14 +18,14 @@ int main (int argc, char *argv[]) {
     // set of signals (N.B. it is not initialized!)
     sigset_t mySet;
     // initialize mySet to contain all signals
-    //...
+    sigfillset(&mySet);
     // remove SIGINT from mySet
-    //...
+    sigdelset(&mySet, SIGINT);
     // blocking all signals but SIGINT
-    //...
+    sigprocmask(SIG_SETMASK, &mySet, NULL);
 
     // set the function sigHandler as handler for the signal SIGINT
-    if (signal(/*...*/) == /*...*/)
+    if (signal(SIGINT, sigHandler) == SIG_ERR)
         errExit("change signal handler failed");
 
     // inifinite loop

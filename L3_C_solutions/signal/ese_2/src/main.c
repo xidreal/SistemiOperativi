@@ -27,13 +27,14 @@ int main (int argc, char *argv[]) {
         return 1;
 
     // set the function sigHandler as handler for the signal SIGALRM
-    //...
+    if(sigal(SIGALARM, sigHandler) == SIG_ERR)
+        errExit("change signal handler failed");
 
     // set a timer, an alarm, with a delay of sleepFor seconds
-    //...
+    alarm(sleepFor);
 
     // pause the calling process until any signal is delivered
-    //...
+    pause();
 
     return 0;
 }
