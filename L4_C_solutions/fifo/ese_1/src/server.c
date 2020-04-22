@@ -34,13 +34,14 @@ int main (int argc, char *argv[]) {
     // Wait for clients in read-only mode. The open blocks the calling process
     // until another process opens the same FIFO in write-only mode
     printf("<Server> waiting for a client...\n");
-    serverFIFO = open(path2ServerFIFO, O_RDWR);
+    serverFIFO = open(path2ServerFIFO, O_RDONLY);
     if (serverFIFO == -1)
         errExit("open failed");
 
     int v [] = {0, 0};
     printf("<Server> waiting for vector [a,b]...\n");
     // Reading 2 integers from the FIFO.
+    
     int bR = read(serverFIFO, v, sizeof(int)*2);
 
     // Checking the number of bytes from the FIFO
@@ -52,6 +53,7 @@ int main (int argc, char *argv[]) {
         printf("<Server> %d is %s %d\n", v[0],
         (v[0] < v[1])? "lower than" : "greater/equals to", v[1]);
 
+    sleep(60);
     // Close the FIFO
     if(close(serverFIFO) != 0)
         errExit("close failed");
