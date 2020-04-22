@@ -52,7 +52,7 @@ int main (int argc, char *argv[]) {
 
     printf("<Server> Making MSG queue...\n");
     // get the message queue, or create a new one if it does not exist
-    int msqid = msgget(msgKey, S_IRUSR | S_IWUSR);
+    int msqid = msgget(msgKey, IPC_CREAT | S_IRUSR | S_IWUSR);
     if (msqid == -1)
         errExit("msgget failed"); 
     
