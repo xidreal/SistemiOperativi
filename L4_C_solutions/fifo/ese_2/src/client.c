@@ -18,7 +18,9 @@ int main (int argc, char *argv[]) {
 
     printf("<Client> opening FIFO %s...\n", path2ServerFIFO);
     // Open the FIFO in write-only mode
-    // ...
+    int serverFIFO = open(path2ServerFIFO, OWRONLY);
+    if(serverFIFO == -1)
+      errExit("open failed");
 
     int v [] = {0, 0};
     printf("<Client> Give me two numbers: ");
@@ -26,8 +28,10 @@ int main (int argc, char *argv[]) {
 
     printf("<Client> sending %d %d\n", v[0], v[1]);
     // Wrinte two integers to the opened FIFO
-    // ...
+    if (write(serverFIFO, &v, sizeof(v)) != sizeof(v))
+      errExit("write failed");
 
     // Close the FIFO
-    // ...
+    if(close(serverFIFO) == -1)
+      errExit("close failed");
 }

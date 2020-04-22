@@ -44,7 +44,11 @@ void sendResponse(struct Request *request) {
 
     printf("<Server> opening FIFO %s...\n", path2ClientFIFO);
     // Open the client's FIFO in write-only mode
-    // ...
+    int client = open(path2ClientFIFO, O_WRONLY);
+    if (client == -1){
+      printf("<Server> open failed");
+      return;
+    }
 
     // Prepare the response for the client
     struct Response response;
@@ -52,10 +56,15 @@ void sendResponse(struct Request *request) {
 
     printf("<Server> sending a response\n");
     // Wrinte the Response into the opened FIFO
-    // ...
+    if(write(client, &response, sizeof(struct Response)) != sizeof(struct Response)){
+      printf("<Server> write failed");
+      return; 
+    }
+
 
     // Close the FIFO
-    // ...
+    if(close(client) == -1)
+      errExit("close failed");
 }
 
 int main (int argc, char *argv[]) {
@@ -65,21 +74,25 @@ int main (int argc, char *argv[]) {
     // user:  read, write
     // group: write
     // other: no permission
-    // ...
+    if(mkfifo(path2ServerFIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
+      errExit("mkfifo failed");
 
     printf("<Server> FIFO %s created!\n", path2ServerFIFO);
 
     // set a signal handler for SIGALRM and SIGINT signals
-    // ...
+    if(signal(SIGALRM, quit) == SIG_ERR || signal(SIGINT, quit) == SIG_ERR)
+      errExit("change signal handlers failed");
 
     // setting a 30 seconds alarm
-    // ...
+    alarm(30);
 
     // Wait for client in read-only mode. The open blocks the calling process
     // until another process opens the same FIFO in write-only mode
     printf("<Server> waiting for a client...\n");
-    // ...
+    serverFIFO = open(path2ServerFIFO, O_RDONLY);
 
+    if(serverFIFO == -1)
+      errExit("open failed");
     // Open an extra descriptor, so that the server does not see end-of-file
     // even if all clients closed the write end of the FIFO
     serverFIFO_extra = open(path2ServerFIFO, O_WRONLY);
@@ -91,21 +104,21 @@ int main (int argc, char *argv[]) {
     do {
         printf("<Server> waiting for a Request...\n");
         // Read a request from the FIFO
-        // ...
+        bR = read(serverFIFO, &request, sizeof(struct Request));
 
         // removethe alarm
-        // ...
+        alarm(0);
 
         // Check the number of bytes read from the FIFO
-        if (/*...*/) {
+        if (bR == -1) {
             printf("<Server> it looks like the FIFO is broken\n");
-        } else if (/*...*/)
+        } else if (bR != sizeof(struct Request))
             printf("<Server> it looks like I did not receive a valid request\n");
         else
             sendResponse(&request);
 
         // reset the alarm
-        // ...
+        alarm(30);
     } while (bR != -1);
 
     // the FIFO is broken, run quit() to remove the FIFO and
