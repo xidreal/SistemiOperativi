@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
     // Wait for clients in read-only mode. The open blocks the calling process
     // until another process opens the same FIFO in write-only mode
     printf("<Server> waiting for a client...\n");
-    serverFIFO = open(path2ServerFIFO, O_RDONLY);
+    serverFIFO = open(path2ServerFIFO, O_RDWR);
     if (serverFIFO == -1)
         errExit("open failed");
 
