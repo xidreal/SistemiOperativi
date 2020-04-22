@@ -14,7 +14,10 @@ int msqid = -1;
 void signTermHandler(int sig) {
     // do we have a valid message queue identifier?
     if (msqid > 0) {
-        //...
+      if(msgctl(msqid, IPC_RMID, NULL) == -1)
+        errExit("msgctl failed");
+    } else {
+      printf("<Server> message queue removed successfully\n");
     }
 
     // terminate the server process
@@ -38,15 +41,19 @@ int main (int argc, char *argv[]) {
     // set of signals (N.B. it is not initialized!)
     sigset_t mySet;
     // blocking all signals but SIGTERM
-    // ...
-
+    sigfillset(&mySet);
+    sigdelset(&mySet, SIGTERM);
+    sigprocmask(SIG_SETMASK, &mySet, NULL);
     // set the function sigHandler as handler for the signal SIGTERM
-    // ...
+    if(signal(SIGTERM, signTermHandler) == SIG_ERR)
+      errExit("change signal handler failed");
 
     printf("<Server> Making MSG queue...\n");
     // get the message queue, or create a new one if it does not exist
-    msqid = // ...
-
+    msqid = msgget(msgKey, IPC_CREAT | S_IRUSR | S_IWUSR);
+    if(msqid == -1)
+      errExit("msqid failed");
+      
     // check functionality
     printf("<Server> sleep...\n");
     sleep(60);
@@ -58,7 +65,10 @@ int main (int argc, char *argv[]) {
     // endless loop
     while (1) {
 	    // read a message from the message queue.
-        // ...
+        size_t mSize = sizeof(struct order) - sizeof(order.mtype);
+        if(msgrcv(msqid, &order, mSize, -2, 0 ) == -1)
+          errExit("msgget failed");
+
 
         // print the order on standard output
         printOrder(&order);

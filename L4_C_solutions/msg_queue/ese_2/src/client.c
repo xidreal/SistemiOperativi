@@ -8,6 +8,19 @@
 
 #include "order.h"
 #include "errExit.h"
+int readInt(const char *s){
+    char *endptr = NULL;
+
+    errno = 0;
+    long int res = strtol(s, &endptr, 10);
+
+    if(errno != 0 || *endptr != '\n' || res < 0){
+        printf("invalid input argument\n");
+        exit(1);
+    }
+
+    return res;
+}
 
 int main (int argc, char *argv[]) {
     // check command line input arguments
@@ -24,37 +37,46 @@ int main (int argc, char *argv[]) {
     }
 
     // get the message queue identifier
-    int msqid = // ...
+    int msqid = msgget(msgKey, S_IRUSR | S_IWUSR);
 
     char buffer[10];
-    size_t len;
+    //size_t len;
 
     // crea an order data struct
     struct order order;
 
     // setting the order's type
     printf("Are you a prime user[y/n]: ");
-    order.mtype = // ...
+    
+    fgets(buffer, sizeof(char)*3, stdin);
+    
+    order.mtype = (buffer[0] == 'y' ? 1 : 2);
 
     // read the code of the client's order
-    printf("Insert order code: ");
-    // ...
+   printf("Insert order code: ");
+    fgets(buffer, sizeof(buffer), stdin);
+    order.code = readInt(buffer);
 
     // read a description of the order
     printf("Insert a description: ");
-    // ...
-
+    fgets(order.description, sizeof(order.description), stdin);
+    order.description[strlen(order.description)-1] = '\0';
+    
     // read a quantity
     printf("Insert quantity: ");
-    // ...
+    fgets(buffer, sizeof(buffer), stdin);
+    order.quantity = readInt(buffer);
 
     // read an e-mail
     printf("Insert an e-mail: ");
-    // ...
+    fgets(order.email, sizeof(order.email), stdin);
+    order.email[strlen(order.email)-1] = '\0';
 
     // send the order to the server through the message queue
     printf("Sending the order...\n");
-    // ...
+    size_t mSize = sizeof(order) - sizeof(order.mtype);
+    if(msgsnd(msqid, &order, mSize, 0) == -1)
+        errExit("msgsnd failed");
 
     printf("Done\n");
     return 0;
