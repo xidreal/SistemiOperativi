@@ -29,7 +29,8 @@ int main (int argc, char *argv[]) {
     }
 
     // Create a semaphore set with 4 semaphores
-    int semid = // ...
+    printf("IPC_PRIVATE: %i\n", IPC_PRIVATE); //Curiosità quanto vale IPC_PRIVATE
+    int semid = semget(IPC_PRIVATE, 4, IPC_CREAT | S_IRUSR | S_IWUSR);
     if (semid == -1)
         errExit("semget failed");
 
@@ -37,8 +38,9 @@ int main (int argc, char *argv[]) {
     unsigned short semInitVal[] = {0, 0, 0, 1};
     union semun arg;
     arg.array = semInitVal;
+    
 
-    if (/*...*/)
+    if (semctl(semid, 0, SETALL, arg) == -1)
         errExit("semctl SETALL failed");
 
     // Generate 4 child processes:
@@ -46,15 +48,16 @@ int main (int argc, char *argv[]) {
     for (int child = 0; child < 4; ++child) {
         pid_t pid = fork();
         // check error for fork
-        if (/*...*/)
+        if (pid == -1)
             printf("child %d not created!", child);
         // check if running process is child or parent
-        else if (/*...*/) {
+        else if (pid != 0) {
             // code executed only by the child
             for (int times = 0; times < n; times++) {
                 // Idea: Fourth child prints and then unlock the third child
                 //       Third child prints and then unlock the second child
-                //       ...
+                semOp (semid, 4-child, -1);
+                
                 //       First child prints and then unlock the fourth child
 
                 // wait the i-th semaphore
@@ -62,12 +65,16 @@ int main (int argc, char *argv[]) {
 
                 // print the message on terminal
                 printf("%s", messages[child]);
+                
                 // flush the standard out
                 fflush(stdout);
 
                 // unlock the (i-1)-th semaphore.
                 // child is equal to 0, then the fourth child is unlocked
-                // ...
+                if (child == 0)
+                    semOp(semid, 4, 1);
+                else
+                    semOp (semid, 4-child-1, 1);
             }
 
             exit(0);
@@ -76,10 +83,11 @@ int main (int argc, char *argv[]) {
     // code executed only by the parent process
 
     // wait the termination of all child processes
-    // ...
+    for(int i = 0; i < 4; i++)
+        wait(NULL);
 
     // remove the created semaphore set
-    if (/*...*/)
+    if (semctl(semid, 0, IPC_RMID, 0) == -1)
         errExit("semctl IPC_RMID failed");
 
     return 0;

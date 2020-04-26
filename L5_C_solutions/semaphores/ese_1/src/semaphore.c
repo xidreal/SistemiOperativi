@@ -4,8 +4,8 @@
 #include "errExit.h"
 
 void semOp (int semid, unsigned short sem_num, short sem_op) {
-    struct sembuf sop = { /*...*/};
+    struct sembuf sop = {sem_num, sem_op, 0};
 
-    if (semop(/*...*/) == /*...*/)
+    if (semop(semid, &sop, sizeof(struct sembuf)) == -1)
         errExit("semop failed");
 }
