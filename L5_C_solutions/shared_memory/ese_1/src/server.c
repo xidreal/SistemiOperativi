@@ -19,7 +19,7 @@
 
 int create_sem_set(key_t semkey) {
     // Create a semaphore set with 2 semaphores
-    int semid = // ...
+    int semid = semget(semkey, 2, IPC_CREAT | S_IRUSR | S_IWUSR);
     if (semid == -1)
         errExit("semget failed");
 
@@ -28,7 +28,8 @@ int create_sem_set(key_t semkey) {
     unsigned short values[] = {0, 0};
     arg.array = values;
 
-    // ...
+    if(semctl(semid, 0, SETALL, arg) == -1)
+        errExit("setall failed");
     return semid;
 }
 
