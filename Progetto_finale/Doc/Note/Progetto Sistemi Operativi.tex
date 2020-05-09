@@ -5,7 +5,9 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{fancyvrb}
 \title{Progetto Sistemi Operativi}
+\author{Davide Bleggi}
 \begin{document}
 \maketitle
 \newpage
@@ -15,18 +17,20 @@ Trasferimento di messaggi tra dispositivi (\ref{device}). I device si muovono al
 \includegraphics[scale=1.5]{schema}
 
 \section{Elementi}
+
 \subsection{Device} \label{device}
 5 Processi figli del processo server (\ref{server}). Ognuno gestisce la propria FIFO (\ref{ClientDevice}).
-Invia i messaggi che ha agli altri device nell'area del suo raggio di comunicazione ({\ref{RaggioAzione}) e così anche gli altri.
+Invia i messaggi che ha ( e che gli altri non hano) agli altri device nell'area del suo raggio di comunicazione ({\ref{RaggioAzione}) e così faranno anche gli altri.
 I dispositivi devono poter memorizzare e gestire più messaggi contemporaneamente.
 \subsubsection{Funzionamento}
 \begin{enumerate}
-\item invio dei messaggi (se disponibili)
-\item ricezione di messaggi
-\item movimento
+\item Controllo dell'acknowledgement (\ref{acknowledgement}) per verificare a quale device il messaggio non sia ancora arrivato.
+\item Invio dei messaggi (se disponibili) tramite le relative FIFO dei messaggi.
+\item Ricezione di messaggi
+\item Movimento
 \end{enumerate}
 \subsubsection{Device $\longrightarrow$ Device} 
-Il nome della FiFO è \emph{dev\_fifo.pid}.
+Il nome della FIFO è \emph{dev\_fifo.pid}. La fifo è contenuta in \emph{/tmp/dev\_fifo.pid}. Deve sempre rimanere aperta.
 \paragraph{Messaggio} 
 La struttura del messaggio inviato è:
 \begin{itemize}
@@ -36,8 +40,51 @@ La struttura del messaggio inviato è:
 \item \emph{message}: stringa di testo.
 \item \emph{max\_dist}: numero positivo = raggio di invio del messaggio. \label{RaggioAzione}
 \end{itemize}
-\subsubsection{Acknowledgment List} \label{acknowledgement}
+
+\subsection{Server} \label{server}
+Processo padre dei device \ref{device} e di Ack\_manager \ref{AckManager}.
+Genera i segmenti di memoria relativi a acknowledge \ref{acknowledgement} e board \ref{board}.
+Crea i semafori per l'accesso ai segmenti di memoria in ackowledge, in board e al cambio posizone (movimento).  
+Termina solo con SIGTERM (\ref{sigterm}). 
+Scandisce il tempo dei movimenti (fa muovere device1 ogni due secondi che farà partire tutti gli altri a cascata).
+Ogni due secondi stampa le posizioni dei devices e gli id dei messaggi in essi contenuti.
+\paragraph{Esempio stampa}
+\begin{verbatim}
+# Step i: device positions ########################
+pidD1 i_D1 j_D1 msgs: lista message_id
+pidD2 i_D2 j_D2 msgs: lista message_id
+pidD3 i_D3 j_D3 msgs: lista message_id
+pidD4 i_D4 j_D4 msgs: lista message_id
+pidD5 i_D5 j_D5 msgs: lista message_id
+#############################################
+\end{verbatim}
+\paragraph{Avvio}
+\begin{verbatim}
+./server msg_queue_key file_posizioni
+\end{verbatim}
+\subsubsection{SIGTERM} \label{sigterm}
+\begin{itemize}
+\item Termina processi devices (\ref{device})
+\item Termina ack\_manager (\ref{AckManager})
+\item Termina coda di messaggi (\ref{AckManager})
+\item Termina le FIFO (\ref{device})
+\item termina memoria condivisa (\ref{board}, \ref{acknowledgement})
+\item Termina semafori
+\end{itemize}
+
+\subsection{Ack\_manager} \label{AckManager}
+Processo figlio del processo Server\ref{server} Gestisce la lista condivisa di ackowlodgement (\ref{acknowledgement}). 
+Scandisce ad intervalli regolari di 5 secondi la lista  \ref{acknowledgement} per controllare se tutti i dispositivi hanno ricevuto il messaggio.
+In caso positivo invia subito la lista di acknowledgements al Client (\ref{AckManagerClient}).
+Ack\_manager comunica con Client tramite coda di messaggi.
+"Libera" , contrassegnando, i messaggi coinvolti dalla lista condivisa(\ref{acknowledgement}).
+\\Ogni cliente deve ricevere la lista relativa al messaggio che ha immesso nel sistema. 
+\subsubsection{Ack\_manager $\rightarrow$ Client} \label{AckManagerClient}
+Il nome della coda di messaggi è \emph{msg\_queue}
+
+\subsection{Acknowledgment List} \label{acknowledgement}
 Segmento di memoria condivisa generato da server \ref{server}. Gestisce il tracciamento di messaggi tra devices. 
+\\Numero finito di messaggi contenibili.
 \paragraph{Messaggio} 
 La struttura del messaggio inviato è:
 \begin{itemize}
@@ -46,36 +93,28 @@ La struttura del messaggio inviato è:
 \item \emph{message\_id}: id del messaggio
 \item \emph{date\_time}: data e ora di un passaggio
 \end{itemize}
-
-\subsection{Server} \label{server}
-Processo padre dei device \ref{device} e di Ack\_manager \ref{AckManager}.
-Genera i segmenti di memoria relativi a acknowledge \ref{acknowledgement} e board \ref{board}.
-Crea i semafori per l'accesso ai segmenti di memoria in ackowledge, in board e al cambio posizone (movimento).  
-Termina solo con SIGTERM (\ref{sigterm}). 
-Scandisce il tempo dei movimenti.
-\subsubsection{SIGTERM} \label{sigterm}
-\begin{itemize}
-\item Termina processi devices (\ref{device})
-\item Termina ack\_manager (\ref{AckManager})
-\item Termina coda di messaggi (\ref{AckManager})
-\item Termina FIFO (\ref{device})
-\item termina memoria condivisa (\ref{board}, \ref{acknowledgement})
-\item Termina semafori
-\end{itemize}
-
-\subsection{Ack\_manager} \label{AckManager}
-Processo figlio del processo Server\ref{server} Gestisce la lista condivisa di ackowlodgement (\ref{acknowledgement}). 
-Scandisce ad intervalli regolari di 5 secondi la lista per controllare se tutti i dispositivi hanno ricevuto il messaggio.
-In caso positivo invia subito la lista di acknowledgements al client (\ref{AckManagerClient}).
-Ack\_manager comunica con Client tramite coda di messaggi.
-Rimuove i messaggi dalla lista condivisa(\ref{acknowledgement}).
-\subsubsection{Ack\_manager $\rightarrow$ Client} \label{AckManagerClient}
-Il nome della coda di messaggi è \emph{msg\_queue}
+\paragraph{Struttura dati messaggio}
+Quindi la struttura dati è:
+\begin{Verbatim}
+typedef struct {
+	pid_t pid_sender;
+	pid_t pid_receiver;
+	int message_id;
+	time_t timestamp;
+} Acknowledgment;
+\end{Verbatim}
 
 \subsection{Board (Scacchiera)} \label{board}
 Scacchiera 10x10. Segmento di memoria condivisa generato da server \ref{server}. In posizione i,j ha scritto il PID del device (\ref{device}) che è in quella posizione. Default cella = 0. I movimenti dei devices sulla scacchiera avvengono a turno ogni 2 secondi (tempo dato dal server). La sincronizzazione dei movimenti avviene tramite semaforo (\ref{semaforo}).
 \subsubsection{Posizioni}
 File posizione. Direttive di spostamento dei device.
+\paragraph{formato}
+\begin{Verbatim}
+1,7|7,3|2,6|1,2|7,2
+0,7|7,4|3,6|1,1|7,1
+...
+\end{Verbatim}
+Ciascuna riga rappresenta la posizione (coordinate x,y, dove x è la riga ed y la colonna) dei 5 device nella scacchiera in un certo istante
 \subsubsection{Semaforo} \label{semaforo}
 Il semaforo si chiama \emph{SEM\_IDX\_BOARD}.
 
@@ -83,10 +122,32 @@ Il semaforo si chiama \emph{SEM\_IDX\_BOARD}.
 Processo generato dall'utente. 
 Il client comunica con il Device tramite FIFO (\ref{ClientDevice}).
 Più client possono inviare messaggi contemporaneamente ai dispositivi.
-Quando riceve il messaggio da parte di acknowledgement (\ref{acknowledgement}), genera un file di nome \emph out\_message\_id.txt(\ref{outputfile}) dove message\_id è l'id del messaggio.
+Quando riceve il messaggio da parte di ack\_manager (\ref{AckManager}), genera un file di nome \emph out\_message\_id.txt(\ref{outputfile}) dove message\_id è l'id del messaggio.
 Una volta generato il file il client termina.
+\textbf{\\Il message\_id deve essere univoco.}
+\paragraph{Avvio}
+\begin{verbatim}
+./client msg_queue_key
+\end{verbatim}
+\paragraph{Richiesta client $ \rightarrow$ utente}
+\begin{itemize}
+\item Inserire pid device a cui inviare il messaggio (pid\_t pid\_device)
+\item Inserire id messaggio (int message\_id)
+\item Inserire messaggio (char* message)
+\item Inserire massima distanza comunicazione per il messaggio (double max\_distance)
+\end{itemize}
 \subsubsection{Output file}  \label{outputfile}
-Lista di 5 acknowledgement che identificano i passaggi fatti dal messaggio con i relativi istanti di tempo
+Lista di 5 acknowledgement che identificano i passaggi fatti dal messaggio con i relativi istanti di tempo.
+\paragraph{Formato}
+\begin{Verbatim}
+Messaggio ‘message_id’: ‘message’
+Lista acknowledgment:
+pid_client, pid D1, date_time
+pid D1, pid D2, date_time
+pid D2, pid D3, date_time
+pid D3, pid D4, date_time
+pid D4, pid D5, date_time
+\end{Verbatim}
 \subsubsection{Client $\longrightarrow$ Device} \label{ClientDevice}
 Il nome della FIFO è \emph{dev\_fifo.pid}.
 \paragraph{Messaggio} 
@@ -98,6 +159,17 @@ La struttura del messaggio inviato è:
 \item \emph{message}: stringa di testo.
 \item \emph{max\_idist}: numero positivo = raggio di invio del messaggio. 
 \end{itemize}
+\paragraph{Struttura dati messaggio}
+La struttura dati è quindi:
+\begin{Verbatim}
+typedef struct {
+	pid_t pid_sender;
+	pid_t pid_receiver;
+	int message_id;
+	char message[256];
+	int max_distance;
+} Message;
+\end{Verbatim}
 
 
 \end{document}
