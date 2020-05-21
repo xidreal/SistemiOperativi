@@ -171,5 +171,172 @@ typedef struct {
 } Message;
 \end{Verbatim}
 
+\section{Ipotesi}
+\subsection{Client}
+\paragraph{Input arg}
+\emph{msg\_queue\_key}
+
+\paragraph{Pseudo codice}
+\begin{Verbatim}
+// Struttura
+struct message = {pid_t pid_sender, pid_t pid_receiver, 
+int message_id, char message[256], int max_dist) 
+
+// Scrittura del messaggio
+Crea this_message;
+Chiedi informazioni(this_message);
+my_message_id = this_message.message_id;
+Dev_FIFO = Apri in scrittura la "dev_fifo".(FIFO this_message.pid_receiver);
+Scrivi su Dev_FIFO (this_message);
+
+// Lettura conferma
+Crea msg_queue(msg_queue_key);
+do{
+	Attendi in lettura sulla msg_queue -> acknowledge *Acknowlodge_list;
+}while (Acknowlodge_list[0].message_id != this_message.message_id);
+
+// Scrittura su file
+file = crea "out"_(this_message.message_id);
+while (Acknowlodge_list[n] != NULL)
+	Stampa su file(Acknowlodge_list[n]);
+
+Chiudi FIFO;
+Chiudi file;
+Termina;
+\end{Verbatim}
+
+\subsection{Server}
+\paragraph{Input arg}
+\emph{msg\_queue\_key, file\_posizioni}
+\paragraph{Pseudo codice}
+
+\begin{Verbatim}[tabsize = 3]
+// Scacchiera
+Board = pid_t [10][10];
+Key Board_memory = Genera segmento di memoria Board;
+Crea semaforo SEM_IDX_BOARD(0,0,0,0,0);
+// Acknowledge_list
+Crea semaforo SEM_IDX_ACK;
+Key Acknowledge_memory = Genera segmento di memoria Acknowlodge_list[100];
+pid_t Device[5];
+
+// Apri file posizioni
+Apri file_posizioni;
+
+// Crea 5 processi figlio
+for (d = 0; d < 5, d++){
+	Device[d] = fork();	
+	
+	// Crea un processo figlio
+	if (Device[d] == 0){
+		// Crea la fifo 
+		Crea la FIFO "/tmp/dev_fifo".getpid();
+		// !Inizializzo struct message messaage_list[100];
+		// continua finche non viene terminato dal server
+		while(1){
+			// Crea il proprio posto nella scacchiera
+			Leggi da file_posizioni i,j lo spazio d-esimo;			
+			Board[i][j] = getpid();
+			
+			Controlla SEM_IDX_ACK;
+					
+			Leggo la FIFO aperta;			
+			// controllo se nel raggio d'azione 
+				sono presenti altri device
+			n = 0;
+			while (message_list[n+1] != NULL){
+				// Controlla la scacchiera alla ricerca delle
+				// poszioni degli altri device
+				for(i = 0; i < 10; i++)
+					for (j = 0; j <10; j++)
+						// Controlla il device trovato	
+						if(Board[i][j] == message_list[n].pid_receiver && 
+							sqrt((i*i + j*j)) < message_list[n].max_dist){
+							
+							// invia messaggio e scrvilo su acknowledge list
+							Controlla SEM_IDX_ACK;						
+							Scrivi message_list[n] 
+								sulla FIFO "/tmp/dev_fifo".list[n].pid_receiver;
+							Libera SEM_IDX_ACK;	
+							Crea un new_acknowledgement con message_list[n];					
+							Scrivi  new_acknowledgement su Acknowledge_list;
+						}
+				n++;
+							
+			}
+			Libera SEM_IDX_ACK del device successivo;				
+			// DA CREARE HANDLER per la rimozione 
+			// della FIFO relativa al processo
+		}
+}
+
+struct identify {
+	int message_id;
+	pid_t pid[5] = {0};
+}
+ack_mager =fork();
+if(ack_manager == 0){
+	while(1){
+		Crea message_queue (message_queue_key);
+		Legge acknowledgement_list;
+		struct indentify Array_code[100];
+		while (acknowledgement_list[i] != NULL)
+			while( Array_code[j].mesage_id != acknowledgement_list[i].message_id)
+				j++;
+				if ( Array_code[j] == NULL){
+					Array_code[j].message_id =  acknowledgement_list[i].message_id;
+					for(n = 0; n < 5; n++){
+						if (Array_code[j].pid == Device[n]){
+							Array_code[j].pid[n]++;
+						if (Array_code[j].pid[n] > 0){
+							counter++;						
+						}
+						if (couter == 5){
+							invia tutti gli acknowledge con questo message_id al client;
+							Contrassegna come letti i rimovibili gli acknowledge;						
+						}
+						}	
+				}
+			if(Array_code[j].mesage_id == acknowledgement_list[i].message_id){
+					for(n = 0; n < 5; n++){
+						if (Array_code[j].pid == Device[n]){
+							Array_code[j].pid[n]++;
+						}	
+					}		
+			}
+			
+						
+			i++;
+		}
+ 		// DA CREARE HANDLER per la rimozione della message queue;
+ 	}
+	
+}
+
+while (ci sono righe in file poszioni){
+	print("# Step i: device positions ########################");\\
+	
+	for(i = 0; i < 10; i++)
+		for (j = 0; j < 10; j++)
+			if(Board[i][j] == D[n])
+				leggi FIFO relativa a D[n];
+				print (D[n] i j msgs: lista message_id);
+
+	print("#############################################");
+	sleep(2);
+	SEM_IDX_BOARD[n](1,0,0,0,0);
+	n = 0;
+}	
+
+		
+		
+Termina Ack_manager;
+Termina Devices,
+Rimuovi SEM_IDX_BOARD;
+Rimuovi Acknowledge_access;
+Rimuovi Board_memory;
+Rimuovi Acknowledge_memory;
+Termina;
+\end{Verbatim}
 
 \end{document}

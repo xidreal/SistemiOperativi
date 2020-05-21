@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 2.9.7400 64-bit) (preloaded format=pdflatex 2020.4.28)  9 MAY 2020 17:25
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 2.9.7400 64-bit) (preloaded format=pdflatex 2020.4.28)  17 MAY 2020 22:31
 entering extended mode
 **"./Progetto Sistemi Operativi.tex"
 ("Progetto Sistemi Operativi.tex"
@@ -374,7 +374,7 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1
 
 {C:/Users/david/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
-<schema.png, id=80, 245.41687pt x 258.36525pt>
+<schema.png, id=92, 245.41687pt x 258.36525pt>
 File: schema.png Graphic file (type png)
 <use schema.png>
 Package pdftex.def Info: schema.png  used on input line 17.
@@ -1037,31 +1037,32 @@ Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
 Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
 (hyperref)                removing `math shift' on input line 151.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 175.
-[6]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 175.
+[6] [7] [8]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 342.
+ [9]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 342.
 
 ("D:\Github\SistemiOperativi\Progetto_finale\Doc\Note\build\Progetto Sistemi Op
 erativi.aux")
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 175.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 175.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 342.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 342.
 Package rerunfilecheck Info: File `"Progetto Sistemi Operativi".out' has not ch
 anged.
-(rerunfilecheck)             Checksum: 560F3572453B5F806F01E7434C8C6D77;1112.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 175.
+(rerunfilecheck)             Checksum: D7472EED406DB3FA1ED5395137B78DBF;1267.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 342.
  )
 (\end occurred inside a group at level 1)
 
 ### simple group (level 1) entered at line 23 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 6760 strings out of 480930
- 102954 string characters out of 2899761
- 362961 words of memory out of 3000000
- 22478 multiletter control sequences out of 15000+200000
+ 6773 strings out of 480930
+ 103096 string characters out of 2899761
+ 363961 words of memory out of 3000000
+ 22481 multiletter control sequences out of 15000+200000
  541050 words of font info for 58 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 34i,6n,31p,420b,528s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 34i,6n,31p,420b,542s stack positions out of 5000i,500n,10000p,200000b,50000s
  <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknap
 pen/ec/dpi600\tcrm1000.pk><C:/Users/david/AppData/Local/Programs/MiKTeX 2.9/fon
 ts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/david/AppData/Local/Programs/M
@@ -1074,9 +1075,9 @@ msfonts/cm/cmsy10.pfb><C:/Users/david/AppData/Local/Programs/MiKTeX 2.9/fonts/t
 ype1/public/amsfonts/cm/cmti10.pfb><C:/Users/david/AppData/Local/Programs/MiKTe
 X 2.9/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
 Output written on "D:\Github\SistemiOperativi\Progetto_finale\Doc\Note\build\Pr
-ogetto Sistemi Operativi.pdf" (6 pages, 333356 bytes).
+ogetto Sistemi Operativi.pdf" (9 pages, 345531 bytes).
 PDF statistics:
- 192 PDF objects out of 1000 (max. 8388607)
- 39 named destinations out of 1000 (max. 500000)
- 142 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 224 PDF objects out of 1000 (max. 8388607)
+ 49 named destinations out of 1000 (max. 500000)
+ 166 words of extra memory for PDF output out of 10000 (max. 10000000)
 
