@@ -3,3 +3,13 @@
 ///         e funzioni specifiche del progetto.
 
 #pragma once
+#include <unistd.h>
+
+// Struttura messaggio
+struct message {
+    pid_t pid_sender;
+    pid_t pid_receiver;
+    int message_id;
+    char message[256]; 
+    float max_dist;
+};
