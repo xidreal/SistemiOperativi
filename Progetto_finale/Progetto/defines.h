@@ -14,4 +14,4 @@ struct message {
     float max_dist;
 };
 
-int prova;
+int prova2;
