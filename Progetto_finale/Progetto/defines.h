@@ -13,3 +13,5 @@ struct message {
     char message[256]; 
     float max_dist;
 };
+
+int prova;
