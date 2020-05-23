@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
+#include <sys/types.h>
+#include "fifo.h"
 
 #include "defines.h"
 
@@ -51,12 +51,17 @@ int main(int argc, char * argv[]) {
     } while (max_dist <= 0);
     this_message.message_id = message_id;
 
-    // Stampa la struttura
+    // DEBUG: Stampa la struttura
     printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
             (char *) this_message.message, this_message.max_dist );
-
-    printf("%s",  path2fifo(pid_receiver));
    
+    // Crea la path dell'indirizzo
+    char path_FIFO[15+10] = "/tmp/dev/_fifo.";
+    char pid2string[10];
+    sprintf(pid2string, "%d", pid_receiver);
+    strcat(path_FIFO, pid2string);
+    printf("%s", path_FIFO);
+
     return 0;
 }
