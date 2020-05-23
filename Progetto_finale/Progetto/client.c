@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "defines.h"
 
@@ -54,6 +55,8 @@ int main(int argc, char * argv[]) {
     printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
             (char *) this_message.message, this_message.max_dist );
+
+    printf("%s",  path2fifo(pid_receiver));
    
     return 0;
 }
