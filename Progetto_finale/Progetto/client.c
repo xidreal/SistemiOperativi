@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include "fifo.h"
-
 #include "defines.h"
+#include "err_exit.h"
+//#define VERBOSE //attiva le stampe di DEBUG
 
 int main(int argc, char * argv[]) {
     
@@ -19,9 +21,10 @@ int main(int argc, char * argv[]) {
     pid_t pid_receiver = 0;
     printf("Inserire il pid del ricevente: ");
     do {
-        scanf("%d", &pid_receiver);
+        scanf(" %d", &pid_receiver);
+        getchar();
         if (pid_receiver <= 0)
-            printf("Inserire un valore positivo");
+            printf("Inserire un valore positivo: ");
     } while (pid_receiver <= 0);
     this_message.pid_receiver = pid_receiver;
 
@@ -30,8 +33,9 @@ int main(int argc, char * argv[]) {
     printf("Inserire il message_id del messaggio: ");
     do {
         scanf("%i", &message_id);
+        getchar();
         if (message_id <= 0)
-            printf("Inserire un valore positivo");
+            printf("Inserire un valore positivo: ");
     } while (message_id <= 0);
     this_message.message_id = message_id;
 
@@ -46,22 +50,33 @@ int main(int argc, char * argv[]) {
     printf("Inserire la distanza di invio del messaggio: ");
     do {
         scanf("%f", &max_dist);
+        getchar();
         if (max_dist <= 0)
-            printf("Inserire un valore positivo");
+            printf("Inserire un valore positivo: ");
     } while (max_dist <= 0);
     this_message.message_id = message_id;
 
-    // DEBUG: Stampa la struttura
+    // DEBUG: Stampa la struttura del messaggio
+    #ifdef VERBOSE
     printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
             (char *) this_message.message, this_message.max_dist );
+    #endif
    
-    // Crea la path dell'indirizzo
+    // Crea la path della FIFO del device
     char path_FIFO[15+10] = "/tmp/dev/_fifo.";
     char pid2string[10];
     sprintf(pid2string, "%d", pid_receiver);
     strcat(path_FIFO, pid2string);
+
+    // DEBUG: Stampa la path della FIFO del device
+    #ifdef VERBOSE
     printf("%s", path_FIFO);
+    #endif
+
+    int deviceFIFO = open(path_FIFO, O_WRONLY);
+    if(deviceFIFO == -1)
+        ErrExit("Open FIFO failed");
 
     return 0;
 }

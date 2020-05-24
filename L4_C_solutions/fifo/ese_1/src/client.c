@@ -12,7 +12,7 @@ int main (int argc, char *argv[]) {
         printf("Usage: %s fifo_pathname\n", argv[0]);
         return 0;
     }
-
+    
     // read the FIFO's pathname
     char *path2ServerFIFO = argv[1];
 
