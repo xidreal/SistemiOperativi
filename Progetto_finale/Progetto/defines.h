@@ -4,14 +4,19 @@
 
 #pragma once
 #include <unistd.h>
+#include <time.h>
 
-// Struttura messaggio
-struct message {
+typedef struct {
     pid_t pid_sender;
     pid_t pid_receiver;
     int message_id;
-    char message[256]; 
-    float max_dist;
-};
+    char message[256];
+    double max_distance;
+} Message;
 
-int prova2;
+typedef struct {
+    pid_t pid_sender;
+    pid_t pid_receiver;
+    int message_id;
+    time_t timestamp;
+} Acknowledgment;

@@ -28,6 +28,7 @@ void free_shared_memory(void *ptr_sh) {
         errExit("shmdt failed");
 }
 
+
 void remove_shared_memory(int shmid) {
     // delete the shared memory segment
     if(shmctl(shmid, IPC_RMID, NULL) == -1)

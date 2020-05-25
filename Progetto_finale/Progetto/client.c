@@ -12,7 +12,7 @@
 
 int main(int argc, char * argv[]) {
     
-    struct message this_message;
+    Message this_message;
     // Richiesta informazioni
     // Pid sender
     this_message.pid_sender = getpid();
@@ -49,7 +49,7 @@ int main(int argc, char * argv[]) {
     float max_dist = 0;
     printf("Inserire la distanza di invio del messaggio: ");
     do {
-        scanf("%f", &max_dist);
+        scanf("%d", &max_dist);
         getchar();
         if (max_dist <= 0)
             printf("Inserire un valore positivo: ");
@@ -58,7 +58,7 @@ int main(int argc, char * argv[]) {
 
     // DEBUG: Stampa la struttura del messaggio
     #ifdef VERBOSE
-    printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
+    printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %d \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
             (char *) this_message.message, this_message.max_dist );
     #endif
