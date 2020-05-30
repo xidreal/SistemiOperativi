@@ -6,14 +6,22 @@
 
 #include <stdlib.h>
 #include <sys/shm.h>
-#include<sys/stat.h>
+#include <sys/stat.h>
+#include "defines.h"
 
 #define BOARD_DIM 10
+#define ACK_LIST_DIM 100
 
 typedef struct{
     key_t key;
     pid_t Board [BOARD_DIM][BOARD_DIM];
 } SharedBoard;
+
+typedef struct{
+    key_t key;
+    Acknowledgment Ack [ACK_LIST_DIM];
+} AckList;
+
 
 // The alloc_shared_memory method creates, if it does not exist, a shared
 // memory segment with size bytes and shmKey key.
