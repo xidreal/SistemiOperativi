@@ -49,18 +49,18 @@ int main(int argc, char * argv[]) {
     float max_dist = 0;
     printf("Inserire la distanza di invio del messaggio: ");
     do {
-        scanf("%d", &max_dist);
+        scanf("%f", &max_dist);
         getchar();
         if (max_dist <= 0)
             printf("Inserire un valore positivo: ");
     } while (max_dist <= 0);
-    this_message.message_id = message_id;
+    this_message.max_distance = max_dist;
 
     // DEBUG: Stampa la struttura del messaggio
     #ifdef VERBOSE
-    printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %d \n", 
+    printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
-            (char *) this_message.message, this_message.max_dist );
+            (char *) this_message.message, this_message.max_distance );
     #endif
    
     // Crea la path della FIFO del device
