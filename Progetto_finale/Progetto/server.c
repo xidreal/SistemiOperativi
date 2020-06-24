@@ -7,6 +7,8 @@
 #include "semaphore.h"
 #include "fifo.h"
 
+#define DEBUGMEM
+
 int main(int argc, char * argv[]) {
     
     if (argc != 3){
@@ -84,36 +86,48 @@ int main(int argc, char * argv[]) {
             ErrExit("Fork failed");
         }
 
+        // Codice del figlio
         if (pid == 0){
+            int j = 0;
+            int x;
+            int y;
             
             Position * current = position_pid[i]->next;
             while (current->next != NULL){
                 semOp(semidBoard, i, -1); // entra il figlio i
-                if (Board -> Board[current->x][current->y] == getpid() || 
-                    Board -> Board[current->x][current->y] != 0){
-                    // Se è la posizione è rimasta invariata o è già occupato non fare nulla
-                } else {   
+                //printf("x = %i, y = %i\n", current->x, current->y);
+                if(j != 0)
+                    Board -> Board[x][y]= 0;
+                if (Board -> Board[current->x][current->y] == 0){
+                    // Se è la posizione è libera
                     Board -> Board[current->x][current->y] = getpid();
                 }
-                semOp(semidBoard, i+1, 1); // libera il fgilio i + 1
-                // DEBUG: view Board
-                #ifdef DEBUG
-                for (int i = 0; i < BOARD_DIM; i++){
-                    for(int j = 0; j < BOARD_DIM; j++){
-                        printf("%i ", Board->Board[i][j]);
-                    }
-                    printf("\n");
-                }
-                printf("\n");
-                #endif
+                x = current->x;
+                y = current->y;
+                current = current->next;
+                j++;
+                semOp(semidBoard, i+1, 1); // libera il fgilio i + 1 
             }
             
             return 0;
         }
     }
 
-    sleep(2);
-    semOp(semidBoard, 0, 1);
+    while(1){
+        sleep(2);
+        // DEBUG: view Board
+                #ifdef DEBUGMEM
+                for (int i = 0; i < BOARD_DIM; i++){
+                    for(int j = 0; j < BOARD_DIM; j++){
+                        printf("%i ", Board->Board[j][i]);
+                    }
+                    printf("\n");
+                }
+                printf("\n");
+                
+                #endif
+        semOp(semidBoard, 0, +1);
+    }
 
     // DEBUG: Test Board
     #ifdef DEBUG

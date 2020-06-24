@@ -14,7 +14,7 @@ void file_to_list(Position * position_pid[], int file){
     // Lettura del file
     ssize_t bR = 0;
 
-    // Leggo a chunks (riga del file), fintanto che vi è qualcosa da leggere
+    // Leggo a chunks (riga del file), fintanto che vi è qualcosa da leggere.
     do {
         bR = read(file, buffer, BUFFER_SZ);
         if (bR > 0) {

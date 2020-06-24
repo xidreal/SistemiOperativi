@@ -10,9 +10,9 @@
 #include <sys/types.h>  // Tipi di variabile
 #include <sys/stat.h>   // Flag
 #include <fcntl.h>      // Flag
-#include <stdlib.h>     // Malloc
+#include <stdlib.h>     // Malloc.
 
-#define DEBUG
+//#define DEBUG
 
 #define BUFFER_SZ 21
 
