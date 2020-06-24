@@ -3,20 +3,24 @@
 ///         e funzioni specifiche del progetto.
 
 #pragma once
-#include <unistd.h>
-#include <time.h>
+#include <unistd.h>     //
+#include <stdio.h>      // print
+#include <time.h>       // Timestamp
+#include <sys/msg.h>    // Msg_queue
+#include <sys/types.h>  // Tipi di variabile
+#include <sys/stat.h>   // Flag
+#include <fcntl.h>      // Flag
+#include <stdlib.h>     // Malloc
 
-#define BUFFER_SZ 20
+#define DEBUG
+
+#define BUFFER_SZ 21
 
 typedef struct Position{
     int x;
     int y;
     struct Position *next;
 } Position;
-
-typedef struct{
-    Position *next;
-} Position_head;
 
 typedef struct {
     pid_t pid_sender;
@@ -32,3 +36,6 @@ typedef struct {
     int message_id;
     time_t timestamp;
 } Acknowledgment;
+
+// Trasfora il file passato in liste di posizioni per ogni device
+void file_to_list(Position * position_pid[], int file);

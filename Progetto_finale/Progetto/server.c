@@ -6,17 +6,6 @@
 #include "shared_memory.h"
 #include "semaphore.h"
 #include "fifo.h"
-#include <stdio.h>
-#include <time.h>
-#include <sys/msg.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-
-#define DEBUG
-//#define VERBOSE
-
 
 int main(int argc, char * argv[]) {
     
@@ -36,64 +25,29 @@ int main(int argc, char * argv[]) {
         printf("File %s does not exist\n", argv[2]);
         ErrExit("File not found");
     }
-
-    // Lettura del file
-    ssize_t bR = 0;
     
     // Liste di posizione dei PID
-    Position_head * position_pid [5];
+    Position * position_pid [5];
     for(int i = 0; i < 5; i++){
-        position_pid[i] = (Position_head *)malloc(sizeof(Position_head));
+        position_pid[i] = (Position *)malloc(sizeof(Position));
     }
- 
-    //char buffer[BUFFER_SZ + 1];
-    char buffer[BUFFER_SZ];
-  
-    do {
-        // read the file in chunks
-        bR = read(file, buffer, BUFFER_SZ);
-        if (bR > 0) {
-            // add the character '\0' to let printf know where a
-            // string ends
-            #ifdef DEBUG
-            buffer[bR] = '\0';
-            printf("DEBUG: read file (%s)\n", buffer);
-            #endif
-            int j = 0;
-            Position_head * current;
+    
+    file_to_list(position_pid, file);
 
-            for(int i = 0; i < 5; i++){
-                current = position_pid[i]; // Copia della testa della lista
-                while (current->next != NULL)
-                    current->next = current->next->next;
-                
-                Position * new_position = (Position *)malloc(sizeof(Position));
-                new_position->x = (int) buffer[j] - 48;
-               
-                j += 2;
-                new_position->y = (int) buffer[j] - 48;
-                
-                j += 2;
-                new_position-> next = NULL;
-                current->next = new_position;
-
-            }
-
-            #ifdef DEBUG
-            current = position_pid[1];
-            while (current -> next != NULL){
-                    printf("DEBUG: list position (%i, %i) \n", current->next->x, current->next->y);
-                    current->next = current->next->next;
-            }
-            #endif
-
-            
+    // DEBUG: List position
+    #ifdef DEBUG
+    Position * current;
+    for(int i = 0; i < 5; i++){
+        current = position_pid[i];
+        printf("DEBUG: list position (");
+        while (current -> next != NULL){
+                printf("%i, %i | ", current->next->x, current->next->y);
+                current = current->next;
         }
-    } while (bR > 0);
-
-    // close the file descriptor
-    close(file);
-
+        printf(")\n");
+    }
+    printf("\n");
+    #endif
 
     // Crea la memoria condivisa per ospitare la Board
     int shmidBoard = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * BOARD_DIM * BOARD_DIM) + sizeof(key_t));
@@ -120,6 +74,7 @@ int main(int argc, char * argv[]) {
     
     // DEBUG: Test Board
     #ifdef DEBUG
+    printf("DEBUG: Test Board ");
     Board -> Board[1][1]= 2;
     pid_t pid = fork();
     if(pid == 0){
@@ -130,10 +85,12 @@ int main(int argc, char * argv[]) {
         return 0;
     }
     printf("%d \n", Board -> Board[1][1]);
+    printf("\n");
     #endif
     
     // DEBUG: Test AcknowledgeList
     #ifdef DEBUG
+    printf("DEBUG: Test Acknowlodgement ");
     pid = fork();
     if(pid == 0){
         AcknowledgeList -> Ack[1].pid_sender = 2;
@@ -144,10 +101,12 @@ int main(int argc, char * argv[]) {
     semOp(semidAck, 1, -1);
     printf("pid_sender: %d \n", AcknowledgeList -> Ack[1].pid_sender);
     printf("timestamp: %s \n", ctime(&(AcknowledgeList -> Ack[1].timestamp)));
+    printf("\n");
     #endif
 
     // DEBUG: Test Semaphore
     #ifdef DEBUG
+    printf("DEBUG: Test semaphore ");
     pid = fork();
     if (pid == 0){
         printf("Figlio 2 inizializzato \n");
@@ -165,6 +124,7 @@ int main(int argc, char * argv[]) {
         return 0;
     }
     semOp(semidBoard, 2, -1);   
+    printf("\n");
     #endif
 
     // TODO: da gestire in handler
