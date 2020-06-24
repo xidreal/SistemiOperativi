@@ -32,6 +32,7 @@ int main(int argc, char * argv[]) {
         position_pid[i] = (Position *)malloc(sizeof(Position));
     }
     
+    // Da file a liste
     file_to_list(position_pid, file);
 
     // DEBUG: List position
@@ -52,13 +53,18 @@ int main(int argc, char * argv[]) {
     // Crea la memoria condivisa per ospitare la Board
     int shmidBoard = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * BOARD_DIM * BOARD_DIM) + sizeof(key_t));
     SharedBoard * Board = (SharedBoard *)get_shared_memory(shmidBoard, 0);
+
+    // Inizializzo la Board
+    for (int i = 0; i < BOARD_DIM; i++)
+        for(int j = 0; j < BOARD_DIM; j++)
+            Board->Board[i][j] = 0;
     
     int shmidAcknowledge = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * ACK_LIST_DIM) + sizeof(key_t));
     AckList * AcknowledgeList = (AckList *)get_shared_memory(shmidAcknowledge, 0);
 
     // Crea e inizializza i semafori
     int semidBoard = semget(IPC_PRIVATE, 5, S_IRUSR | S_IWUSR);
-    unsigned short semInitValBoard[] = {0, 0, 0, 0, 0};
+    unsigned short semInitValBoard[] = {1, 0, 0, 0, 0};
     union semun argBoard;
     argBoard.array = semInitValBoard;
     if (semctl(semidBoard, 0, SETALL, argBoard) == -1)
@@ -72,6 +78,43 @@ int main(int argc, char * argv[]) {
     if (semctl(semidAck, 0, SETALL, argAck) == -1)
         ErrExit("semctl SETALL failed");
     
+    for(int i = 0; i < 5; i++){
+        pid_t pid = fork(); 
+        if (pid == -1){
+            ErrExit("Fork failed");
+        }
+
+        if (pid == 0){
+            
+            Position * current = position_pid[i]->next;
+            while (current->next != NULL){
+                semOp(semidBoard, i, -1); // entra il figlio i
+                if (Board -> Board[current->x][current->y] == getpid() || 
+                    Board -> Board[current->x][current->y] != 0){
+                    // Se è la posizione è rimasta invariata o è già occupato non fare nulla
+                } else {   
+                    Board -> Board[current->x][current->y] = getpid();
+                }
+                semOp(semidBoard, i+1, 1); // libera il fgilio i + 1
+                // DEBUG: view Board
+                #ifdef DEBUG
+                for (int i = 0; i < BOARD_DIM; i++){
+                    for(int j = 0; j < BOARD_DIM; j++){
+                        printf("%i ", Board->Board[i][j]);
+                    }
+                    printf("\n");
+                }
+                printf("\n");
+                #endif
+            }
+            
+            return 0;
+        }
+    }
+
+    sleep(2);
+    semOp(semidBoard, 0, 1);
+
     // DEBUG: Test Board
     #ifdef DEBUG
     printf("DEBUG: Test Board ");
@@ -137,12 +180,6 @@ int main(int argc, char * argv[]) {
     remove_semaphore(semidBoard);
     // Rimozione semafori acknowledge_list
     remove_semaphore(semidAck);
-
-    /*
-    Key Acknowledge_memory = Genera segmento di memoria Acknowlodge_list[100];
-    pid_t Device[5];
-    // Apri file posizioni
-    Apri file_posizioni;*/
 
     return 0;
 }
