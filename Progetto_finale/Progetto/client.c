@@ -64,7 +64,7 @@ int main(int argc, char * argv[]) {
     #endif
    
     // Crea la path della FIFO del device
-    char path_FIFO[15+10] = "/tmp/dev/_fifo.";
+    char path_FIFO[15+10] = "/tmp/dev_fifo.";
     char pid2string[10];
     sprintf(pid2string, "%d", pid_receiver);
     strcat(path_FIFO, pid2string);

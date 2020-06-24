@@ -13,7 +13,7 @@
 #include <stdlib.h>     // Malloc.
 
 //#define DEBUG
-
+#define PACE_TIMER 2 // Tempo di esecuzione degli spostamenti in secondi
 #define BUFFER_SZ 21
 
 typedef struct Position{
