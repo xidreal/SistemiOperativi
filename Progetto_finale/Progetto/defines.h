@@ -7,10 +7,9 @@
 
 #include <sys/types.h>  // Tipi di variabile
 
-//#define DEBUG
+#define DEBUG
 #define PACE_TIMER 2 // Tempo di esecuzione degli spostamenti in secondi
 #define BUFFER_SZ 21
-#define DEBUG
 
 typedef struct Position{
     int x;
