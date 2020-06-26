@@ -41,4 +41,7 @@ void free_shared_memory(void *ptr_sh);
 
 // The remove_shared_memory removes a shared memory segment
 // If it does not succeed, it terminates the calling process
-void remove_shared_memory(int shmid);;
+void remove_shared_memory(int shmid);
+
+// Controlla se nella memoria condivisa è presente un message con message_id specificato
+int messageID_in_Acknowledgelist(int message_id, AckList * AcknowledgeList);

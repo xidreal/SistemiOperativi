@@ -34,3 +34,16 @@ void remove_shared_memory(int shmid) {
     if(shmctl(shmid, IPC_RMID, NULL) == -1)
         ErrExit("shmctl remove failed");
 }
+
+int messageID_in_Acknowledgelist(int message_id, AckList * AcknowledgeList ){
+    int i = 0;
+    for (; &AcknowledgeList -> Acknowledgment_List[i+1] != NULL && 
+        AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM; 
+        i++);
+    
+    if (AcknowledgeList -> Acknowledgment_List[i].message_id == message_id)
+        return 1;
+    else
+        return 0;
+    
+}

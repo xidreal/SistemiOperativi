@@ -2,8 +2,10 @@
 /// @brief Contiene l'implementazione delle funzioni
 ///         specifiche del progetto.
 
+
 #include "defines.h"
 #include "shared_memory.h"
+#include <unistd.h> 
 
 void file_to_list(Position * position_pid[], int file){
     // Pointer ausiliario per lo scorrimento della lista posizione
@@ -52,17 +54,4 @@ void file_to_list(Position * position_pid[], int file){
 
     // close the file descriptor
     close(file);
-}
-
-int control_IDMessage_in_Acknowledgelist(int message_id, AckList * AcknowledgeList ){
-    int i = 0;
-    for (; &AcknowledgeList -> Acknowledgment_List[i+1] != NULL && 
-        AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM; 
-        i++);
-    
-    if (AcknowledgeList -> Acknowledgment_List[i].message_id == message_id)
-        return 1;
-    else
-        return 0;
-    
 }

@@ -6,6 +6,13 @@
 #include "shared_memory.h"
 #include "semaphore.h"
 #include "fifo.h"
+#include <unistd.h>     //
+#include <stdio.h>      // print
+#include <time.h>       // Timestamp
+#include <sys/msg.h>    // Msg_queue
+#include <sys/stat.h>   // Flag
+#include <fcntl.h>      // Flag
+#include <stdlib.h>     // Malloc
 
 //#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
@@ -105,7 +112,7 @@ int main(int argc, char * argv[]) {
             if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
                 ErrExit("mkfifo failed");
             // Apri in sola lettura
-            if (pidFIFO = open(path_FIFO, O_RDWR) == -1)
+            if ((pidFIFO = open(path_FIFO, O_RDWR)) == -1)
                 ErrExit("open failed");
 
             int i = 0;
@@ -119,23 +126,29 @@ int main(int argc, char * argv[]) {
             while (1){
 
                 semOp(semidBoard, pid_i, -1); // entra il figlio i
+                #ifdef DEBUG
+                printf("<PID %i> Passato il semaforo Board.\n", getpid());
+                #endif
                 semOp(semidAck, 0, -1); // entro nella sezione critica dell' Acknowlodgement List
-                
+                #ifdef DEBUG
+                printf("<PID %i> Passato il semaforo Ack.\n", getpid());
+                #endif
+                /*
                 Pid_message * current_pid_message = pid_message;
                 Pid_message * prev = pid_message;
                 while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
                     // Controllo che il message id sia ancora in lista
-                    if(control_IDMessage_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){
+                    if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
                         prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
                         current_pid_message = prev;                                        
-
+                    }
                     prev = current_pid_message;   
                     current_pid_message = current_pid_message->next;
                 }                
 
                 // Trovo la prima riga libera su Acklist
                 Acknowledgment currentAck;
-                while(AcknowledgeList -> Acknowledgment_List[i].pid_sender != NULL)
+                while(&AcknowledgeList -> Acknowledgment_List[i].message_id != NULL && i < ACK_LIST_DIM)
                     i++;
                 currentAck = AcknowledgeList -> Acknowledgment_List[i];
 
@@ -145,24 +158,26 @@ int main(int argc, char * argv[]) {
                 do{
                     Message message;
                     bR = read(pidFIFO, &message, sizeof(Message));
-                    if (bR == -1)
+                    if (bR == -1){
                         printf("<PID %i> La FIFO potrebbe essere danneggiata", getpid());
-                    if (bR != sizeof(Message) || bR == 0)
+                    }
+                    if (bR != sizeof(Message) || bR == 0){
                         printf("<PID %i> I messaggi da leggere sono finiti", getpid());
-                    else
+                    } else {
                         acknowledgment.message_id = current_pid_message->message.message_id;
                         acknowledgment.pid_receiver = current_pid_message->message.pid_receiver;
                         acknowledgment.pid_sender = current_pid_message->message.pid_sender;
-                        acknowledgment.timestamp = TIME(NULL);
+                        acknowledgment.timestamp = time(NULL);
                         currentAck = acknowledgment;
                         currentAck = AcknowledgeList -> Acknowledgment_List[i++];
                         Pid_message * newPidMessage = (Pid_message *)malloc(sizeof(Pid_message));
                         newPidMessage->message = message;
                         current_pid_message->next = newPidMessage;
+                    }
 
                 } while(bR > 0);
 
-                i = 0; // reinizializza i
+                i = 0; // reinizializza i*/
                 
                 // WRITE su acknowledge-list
                 semOp(semidAck, 0, 1);
@@ -224,7 +239,7 @@ int main(int argc, char * argv[]) {
         ErrExit("semctl SETALL failed");
     }
 
-    // DEBUG: Test Board
+    /*// DEBUG: Test Board
     #ifdef DEBUG
     printf("DEBUG: Test Board ");
     Board -> Board[1][1]= 2;
@@ -238,9 +253,9 @@ int main(int argc, char * argv[]) {
     }
     printf("%d \n", Board -> Board[1][1]);
     printf("\n");
-    #endif
+    #endif*/
     
-    // DEBUG: Test AcknowledgeList
+    /* // DEBUG: Test AcknowledgeList
     #ifdef DEBUG
     printf("DEBUG: Test Acknowlodgement ");
     pid = fork();
@@ -254,9 +269,9 @@ int main(int argc, char * argv[]) {
     printf("pid_sender: %d \n", AcknowledgeList -> Ack[1].pid_sender);
     printf("timestamp: %s \n", ctime(&(AcknowledgeList -> Ack[1].timestamp)));
     printf("\n");
-    #endif
+    #endif*/
 
-    // DEBUG: Test Semaphore
+    /*// DEBUG: Test Semaphore
     #ifdef DEBUG
     printf("DEBUG: Test semaphore ");
     pid = fork();
@@ -277,7 +292,7 @@ int main(int argc, char * argv[]) {
     }
     semOp(semidBoard, 2, -1);   
     printf("\n");
-    #endif
+    #endif*/
 
     // TODO: da gestire in handler
     // Detach del segmento
