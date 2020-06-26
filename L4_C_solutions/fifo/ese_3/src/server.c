@@ -61,7 +61,6 @@ void sendResponse(struct Request *request) {
       return; 
     }
 
-
     // Close the FIFO
     if(close(client) == -1)
       errExit("close failed");

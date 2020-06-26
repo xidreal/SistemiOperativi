@@ -19,7 +19,7 @@ typedef struct{
 
 typedef struct{
     key_t key;
-    Acknowledgment Ack [ACK_LIST_DIM];
+    Acknowledgment Acknowledgment_List [ACK_LIST_DIM];
 } AckList;
 
 

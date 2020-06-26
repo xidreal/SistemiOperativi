@@ -77,6 +77,8 @@ int main(int argc, char * argv[]) {
     int deviceFIFO = open(path_FIFO, O_WRONLY);
     if(deviceFIFO == -1)
         ErrExit("Open FIFO failed");
+    
+    // write su FIFO
 
     return 0;
 }

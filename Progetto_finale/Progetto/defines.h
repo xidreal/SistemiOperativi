@@ -30,6 +30,11 @@ typedef struct {
     double max_distance;
 } Message;
 
+typedef struct Pid_message{
+    Message message;
+    struct Pid_message *next;
+} Pid_message;
+
 typedef struct {
     pid_t pid_sender;
     pid_t pid_receiver;
@@ -39,3 +44,5 @@ typedef struct {
 
 // Trasfora il file passato in liste di posizioni per ogni device
 void file_to_list(Position * position_pid[], int file);
+
+int control_IDMessage_in_Acknowledgelist(int message_id, AckList * AcknowledgeList);

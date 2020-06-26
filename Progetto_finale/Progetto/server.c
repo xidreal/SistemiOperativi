@@ -7,7 +7,8 @@
 #include "semaphore.h"
 #include "fifo.h"
 
-//#define VIEWBOARD
+//#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
+#define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 
 int main(int argc, char * argv[]) {
     
@@ -73,8 +74,8 @@ int main(int argc, char * argv[]) {
         ErrExit("semctl SETALL failed");
 
     // Crea e inizializza i semafori dell'Acknowledge_list
-    int semidAck = semget(IPC_PRIVATE, 2, S_IRUSR | S_IWUSR);
-    unsigned short semInitValAck[] = {1, 0};
+    int semidAck = semget(IPC_PRIVATE, 1, S_IRUSR | S_IWUSR);
+    unsigned short semInitValAck[] = {1};
     union semun argAck;
     argAck.array = semInitValAck;
     if (semctl(semidAck, 0, SETALL, argAck) == -1)
@@ -91,6 +92,9 @@ int main(int argc, char * argv[]) {
         // Codice del Device i-esimo
         if (pid[pid_i] == 0){
             
+            // INIZIALIZZA DEVICE
+
+            int pidFIFO; 
             // Crea la FIFO legata al Device
             // Crea la path della FIFO del device
             char path_FIFO[15+10] = "/tmp/dev_fifo.";
@@ -101,7 +105,7 @@ int main(int argc, char * argv[]) {
             if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
                 ErrExit("mkfifo failed");
             // Apri in sola lettura
-            if (open(path_FIFO, O_RDONLY) == -1)
+            if (pidFIFO = open(path_FIFO, O_RDWR) == -1)
                 ErrExit("open failed");
 
             int i = 0;
@@ -109,19 +113,81 @@ int main(int argc, char * argv[]) {
             int y;
             
             Position * current = position_pid[pid_i]->next;
-            while (current != NULL){
+            // Creazione della lista di messaggi del device
+            Pid_message * pid_message = (Pid_message *) malloc (sizeof(Pid_message)); 
+
+            while (1){
+
                 semOp(semidBoard, pid_i, -1); // entra il figlio i
+                semOp(semidAck, 0, -1); // entro nella sezione critica dell' Acknowlodgement List
+                
+                Pid_message * current_pid_message = pid_message;
+                Pid_message * prev = pid_message;
+                while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
+                    // Controllo che il message id sia ancora in lista
+                    if(control_IDMessage_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){
+                        prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
+                        current_pid_message = prev;                                        
+
+                    prev = current_pid_message;   
+                    current_pid_message = current_pid_message->next;
+                }                
+
+                // Trovo la prima riga libera su Acklist
+                Acknowledgment currentAck;
+                while(AcknowledgeList -> Acknowledgment_List[i].pid_sender != NULL)
+                    i++;
+                currentAck = AcknowledgeList -> Acknowledgment_List[i];
+
+                // READ della fifo
+                int bR;
+                Acknowledgment acknowledgment;
+                do{
+                    Message message;
+                    bR = read(pidFIFO, &message, sizeof(Message));
+                    if (bR == -1)
+                        printf("<PID %i> La FIFO potrebbe essere danneggiata", getpid());
+                    if (bR != sizeof(Message) || bR == 0)
+                        printf("<PID %i> I messaggi da leggere sono finiti", getpid());
+                    else
+                        acknowledgment.message_id = current_pid_message->message.message_id;
+                        acknowledgment.pid_receiver = current_pid_message->message.pid_receiver;
+                        acknowledgment.pid_sender = current_pid_message->message.pid_sender;
+                        acknowledgment.timestamp = TIME(NULL);
+                        currentAck = acknowledgment;
+                        currentAck = AcknowledgeList -> Acknowledgment_List[i++];
+                        Pid_message * newPidMessage = (Pid_message *)malloc(sizeof(Pid_message));
+                        newPidMessage->message = message;
+                        current_pid_message->next = newPidMessage;
+
+                } while(bR > 0);
+
+                i = 0; // reinizializza i
+                
+                // WRITE su acknowledge-list
+                semOp(semidAck, 0, 1);
+
+                // MOVIMENTO
                 if(i != 0)
                     Board -> Board[x][y]= 0;
                 if (Board -> Board[current->x][current->y] == 0){
                     // Se la posizione è libera allora scrivi il pid in tale poszione
                     Board -> Board[current->x][current->y] = getpid();
                 }
+              
+                // TODO: binary semaphore per la board
+
+                semOp(semidBoard, pid_i+1, 1); // libera il fgilio i + 1 
                 x = current->x;
                 y = current->y;
-                current = current->next;
                 i++;
-                semOp(semidBoard, pid_i+1, 1); // libera il fgilio i + 1 
+                #ifdef REPEATPOSITION
+                if (current->next == NULL)
+                    current = position_pid[pid_i];
+                #endif
+                if (current->next != NULL)
+                    current = current->next;
+                
             }
             
             return 0;
@@ -141,6 +207,7 @@ int main(int argc, char * argv[]) {
                     if(Board->Board[i][j] == pid[pid_i])
                         printf("%i %i %i msgs: \n", pid[pid_i], i, j);
         printf("#############################################\n\n");
+        step++;
         // DEBUG: view Board
                 #ifdef VIEWBOARD
                 for (int i = 0; i < BOARD_DIM; i++){
@@ -152,7 +219,9 @@ int main(int argc, char * argv[]) {
                 printf("\n");
                 
                 #endif
-        semOp(semidBoard, 0, +1);
+        // semOp(semidBoard, 0, +1);
+        if (semctl(semidBoard, 0, SETALL, argBoard) == -1)
+        ErrExit("semctl SETALL failed");
     }
 
     // DEBUG: Test Board
