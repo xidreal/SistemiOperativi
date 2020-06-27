@@ -13,7 +13,10 @@
 #include <sys/stat.h>   // Flag
 #include <fcntl.h>      // Flag
 #include <stdlib.h>     // Malloc
+#include <errno.h>
+#include <string.h>
 
+//#define DEBUG
 //#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 
@@ -69,7 +72,7 @@ int main(int argc, char * argv[]) {
         for(int j = 0; j < BOARD_DIM; j++)
             Board->Board[i][j] = 0;
     
-    int shmidAcknowledge = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * ACK_LIST_DIM) + sizeof(key_t));
+    int shmidAcknowledge = alloc_shared_memory(IPC_PRIVATE, (sizeof(Acknowledgment) * ACK_LIST_DIM) + sizeof(key_t));
     AckList * AcknowledgeList = (AckList *)get_shared_memory(shmidAcknowledge, 0);
 
     // Crea e inizializza i semafori
@@ -101,7 +104,7 @@ int main(int argc, char * argv[]) {
             
             // INIZIALIZZA DEVICE
 
-            int pidFIFO; 
+            int fdFIFO; 
             // Crea la FIFO legata al Device
             // Crea la path della FIFO del device
             char path_FIFO[15+10] = "/tmp/dev_fifo.";
@@ -112,12 +115,14 @@ int main(int argc, char * argv[]) {
             if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
                 ErrExit("mkfifo failed");
             // Apri in sola lettura
-            if ((pidFIFO = open(path_FIFO, O_RDWR)) == -1)
+            if ((fdFIFO = open(path_FIFO, O_RDONLY| O_NONBLOCK )) == -1)
                 ErrExit("open failed");
+            printf("%i", fdFIFO);
 
             int i = 0;
             int x;
             int y;
+            
             
             Position * current = position_pid[pid_i]->next;
             // Creazione della lista di messaggi del device
@@ -133,52 +138,76 @@ int main(int argc, char * argv[]) {
                 #ifdef DEBUG
                 printf("<PID %i> Passato il semaforo Ack.\n", getpid());
                 #endif
-                /*
+                
                 Pid_message * current_pid_message = pid_message;
                 Pid_message * prev = pid_message;
+
+                #ifdef DEBUG
+                printf("<PID %i> LIST: \n", getpid());
+                #endif
                 while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
                     // Controllo che il message id sia ancora in lista
                     if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
                         prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
-                        current_pid_message = prev;                                        
+                        current_pid_message = prev;                                       
                     }
+                    #ifdef DEBUG
+                    printf("<PID> %i->",current_pid_message->message.message_id);
+                    #endif
                     prev = current_pid_message;   
                     current_pid_message = current_pid_message->next;
-                }                
-
+                }    
+                
+                #ifdef DEBUG
+                printf("\n");
+                #endif
+                
+                
                 // Trovo la prima riga libera su Acklist
-                Acknowledgment currentAck;
-                while(&AcknowledgeList -> Acknowledgment_List[i].message_id != NULL && i < ACK_LIST_DIM)
-                    i++;
-                currentAck = AcknowledgeList -> Acknowledgment_List[i];
-
+                int j = 0;
+                
+                Acknowledgment  currentAck;
+                
+                while((AcknowledgeList -> Acknowledgment_List[j]).message_id > 0 && j < ACK_LIST_DIM){
+                    j++;
+                }
+                currentAck = AcknowledgeList -> Acknowledgment_List[j];
+                
+                j = 0; // reinizializza i
+                
                 // READ della fifo
                 int bR;
                 Acknowledgment acknowledgment;
                 do{
-                    Message message;
-                    bR = read(pidFIFO, &message, sizeof(Message));
+                    Message * message = (Message *)malloc (sizeof(Message));
+                    bR = read(fdFIFO, message, sizeof(message));
                     if (bR == -1){
-                        printf("<PID %i> La FIFO potrebbe essere danneggiata", getpid());
+                        printf("<PID %i> La FIFO potrebbe essere danneggiata\n", getpid());
+                        ErrExit("read failed");
                     }
                     if (bR != sizeof(Message) || bR == 0){
-                        printf("<PID %i> I messaggi da leggere sono finiti", getpid());
+                        printf("<PID %i> I messaggi da leggere sono finiti\n", getpid());
                     } else {
+                        // Scrivi sull'Acknowledge_list
                         acknowledgment.message_id = current_pid_message->message.message_id;
                         acknowledgment.pid_receiver = current_pid_message->message.pid_receiver;
                         acknowledgment.pid_sender = current_pid_message->message.pid_sender;
                         acknowledgment.timestamp = time(NULL);
                         currentAck = acknowledgment;
-                        currentAck = AcknowledgeList -> Acknowledgment_List[i++];
+                        // TODO: ricerca nuova riga disponibile in Acknowledge_list
+                        //currentAck = AcknowledgeList -> Acknowledgment_List[i++];
                         Pid_message * newPidMessage = (Pid_message *)malloc(sizeof(Pid_message));
-                        newPidMessage->message = message;
+                        newPidMessage->message.max_distance = message->max_distance;
+                        newPidMessage->message.message_id = message->message_id;
+                        newPidMessage->message.pid_receiver = message->pid_receiver;
+                        newPidMessage->message.pid_sender = message->pid_sender;
+                        strcpy(newPidMessage->message.message, message->message);
+
                         current_pid_message->next = newPidMessage;
                     }
 
                 } while(bR > 0);
 
-                i = 0; // reinizializza i*/
-                
                 // WRITE su acknowledge-list
                 semOp(semidAck, 0, 1);
 

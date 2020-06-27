@@ -6,6 +6,7 @@
 #include "defines.h"
 #include "shared_memory.h"
 #include <unistd.h> 
+#include <stdio.h>
 
 void file_to_list(Position * position_pid[], int file){
     // Pointer ausiliario per lo scorrimento della lista posizione
