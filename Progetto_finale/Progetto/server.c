@@ -15,8 +15,9 @@
 #include <stdlib.h>     // Malloc
 #include <errno.h>
 #include <string.h>
+#include <sys/wait.h>
 
-//#define DEBUG
+#define DEBUG
 //#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 
@@ -103,7 +104,7 @@ int main(int argc, char * argv[]) {
         if (pid[pid_i] == 0){
             
             // INIZIALIZZA DEVICE
-
+            
             int fdFIFO; 
             // Crea la FIFO legata al Device
             // Crea la path della FIFO del device
@@ -115,18 +116,19 @@ int main(int argc, char * argv[]) {
             if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
                 ErrExit("mkfifo failed");
             // Apri in sola lettura
-            if ((fdFIFO = open(path_FIFO, O_RDONLY| O_NONBLOCK )) == -1)
+            if ((fdFIFO = open(path_FIFO, O_RDWR)) == -1)
                 ErrExit("open failed");
-            printf("%i", fdFIFO);
+            //printf("%i", fdFIFO);
 
             int i = 0;
             int x;
             int y;
             
-            
             Position * current = position_pid[pid_i]->next;
             // Creazione della lista di messaggi del device
             Pid_message * pid_message = (Pid_message *) malloc (sizeof(Pid_message)); 
+
+            int step = 0;
 
             while (1){
 
@@ -180,13 +182,17 @@ int main(int argc, char * argv[]) {
                 Acknowledgment acknowledgment;
                 do{
                     Message * message = (Message *)malloc (sizeof(Message));
-                    bR = read(fdFIFO, message, sizeof(message));
+                    bR = read(fdFIFO, message, sizeof(Message));
                     if (bR == -1){
+                        #ifdef DEBUG
                         printf("<PID %i> La FIFO potrebbe essere danneggiata\n", getpid());
+                        #endif
                         ErrExit("read failed");
                     }
                     if (bR != sizeof(Message) || bR == 0){
+                        #ifdef DEBUG
                         printf("<PID %i> I messaggi da leggere sono finiti\n", getpid());
+                        #endif
                     } else {
                         // Scrivi sull'Acknowledge_list
                         acknowledgment.message_id = current_pid_message->message.message_id;
@@ -218,20 +224,35 @@ int main(int argc, char * argv[]) {
                     // Se la posizione è libera allora scrivi il pid in tale poszione
                     Board -> Board[current->x][current->y] = getpid();
                 }
+
+                //printf("PID %i %i %i %i %i \n", pid[0], pid[1], pid[2], pid[3],pid[4]);
+                
+                // controllo che sial il 1 device per stampare la stringa iniziale
+                if (pid[0] == 0)
+                    printf("# Step %i: device positions ########################\n", step++);
               
                 // TODO: binary semaphore per la board
-
-                semOp(semidBoard, pid_i+1, 1); // libera il fgilio i + 1 
+                for (int i = 0; i < BOARD_DIM; i++)
+                    for(int j = 0; j < BOARD_DIM; j++)
+                        if(Board->Board[i][j] == getpid())
+                            printf("%i %i %i msgs: \n", getpid(), i, j);
+                
+                // Controllo di che sial il 5 device per stampare la stringa finale
+                if (pid[0] != 0 && pid[1] != 0 && pid[2] != 0 && pid[3] != 0 && pid[4] == 0){
+                    printf("#############################################\n\n");
+                } else 
+                    semOp(semidBoard, pid_i+1, 1); // libera il fgilio i + 1 
+                
                 x = current->x;
                 y = current->y;
                 i++;
+
                 #ifdef REPEATPOSITION
                 if (current->next == NULL)
                     current = position_pid[pid_i];
                 #endif
                 if (current->next != NULL)
-                    current = current->next;
-                
+                    current = current->next;    
             }
             
             return 0;
@@ -243,14 +264,14 @@ int main(int argc, char * argv[]) {
     while(1){
         sleep(PACE_TIMER);
         // Stampa info pid
-        printf("# Step %i: device positions ########################\n", step);
+        //printf("# Step %i: device positions ########################\n", step);
         for(int pid_i = 0; pid_i < 5; pid_i++)
             // ricerca del pid all'interno della Board
-            for (int i = 0; i < BOARD_DIM; i++)
+            /*for (int i = 0; i < BOARD_DIM; i++)
                 for(int j = 0; j < BOARD_DIM; j++)
                     if(Board->Board[i][j] == pid[pid_i])
-                        printf("%i %i %i msgs: \n", pid[pid_i], i, j);
-        printf("#############################################\n\n");
+                        printf("%i %i %i msgs: \n", pid[pid_i], i, j);*/
+        //printf("#############################################\n\n");
         step++;
         // DEBUG: view Board
                 #ifdef VIEWBOARD

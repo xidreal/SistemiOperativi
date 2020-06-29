@@ -4,6 +4,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "errExit.h"
+#include <string.h>
+
+
+typedef struct test{
+  int a;
+  char b[3];
+} test;
+
 
 int main (int argc, char *argv[]) {
     // Checkg command line input arguments
@@ -25,10 +33,15 @@ int main (int argc, char *argv[]) {
     int v [] = {0, 0};
     printf("<Client> Give me two numbers: ");
     scanf("%d %d", &v[0], &v[1]);
-
+   
+    test prova;
+    prova.a = 1;
+    prova.b[0] = "ab";
+    strcpy(prova.b, "ab");
+    
     printf("<Client> sending %d %d\n", v[0], v[1]);
     // Wrinte  two integers to the opened FIFO
-    if(write(serverFIFO, &v, sizeof(v)) != sizeof(v))
+    if(write(serverFIFO, &prova, sizeof(test)) != sizeof(test))
         errExit("write failed");
 
     // Close the FIFO

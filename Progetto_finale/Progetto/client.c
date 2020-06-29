@@ -8,7 +8,9 @@
 #include "fifo.h"
 #include "defines.h"
 #include "err_exit.h"
-//#define VERBOSE //attiva le stampe di DEBUG
+#include <unistd.h>
+
+#define DEBUG //attiva le stampe di DEBUG
 
 int main(int argc, char * argv[]) {
     
@@ -42,8 +44,8 @@ int main(int argc, char * argv[]) {
     // messaggio
     printf("Inserire il testo del messaggio: ");
     scanf("%s", this_message.message);
-    //fgets(this_message.message, sizeof(this_message.message), stdin);
-    //this_message.message[strlen(this_message.message)-1] = '\0';
+    // fgets(this_message.message, sizeof(this_message.message), stdin);
+    // this_message.message[strlen(this_message.message)-1] = '\0';
 
     // message_id
     float max_dist = 0;
@@ -57,7 +59,7 @@ int main(int argc, char * argv[]) {
     this_message.max_distance = max_dist;
 
     // DEBUG: Stampa la struttura del messaggio
-    #ifdef VERBOSE
+    #ifdef DEBUG
     printf("message struct: \n pid_sender: %d \n pid_receiver: %d \n message_id: %i \n message: %s \n max_dist: %f \n", 
             this_message.pid_sender, this_message.pid_receiver, this_message.message_id,
             (char *) this_message.message, this_message.max_distance );
@@ -70,7 +72,7 @@ int main(int argc, char * argv[]) {
     strcat(path_FIFO, pid2string);
 
     // DEBUG: Stampa la path della FIFO del device
-    #ifdef VERBOSE
+    #ifdef DEBUG
     printf("%s", path_FIFO);
     #endif
 
@@ -79,6 +81,13 @@ int main(int argc, char * argv[]) {
         ErrExit("Open FIFO failed");
     
     // write su FIFO
+    int bW = write(deviceFIFO, &this_message, sizeof(Message));
+    if (bW == -1){
+        #ifdef DEBUG
+        printf("<PID %i> La FIFO potrebbe essere danneggiata\n", getpid());
+        #endif
+        ErrExit("Write failed");
+    }
 
     return 0;
 }

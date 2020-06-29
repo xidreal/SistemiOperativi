@@ -5,11 +5,17 @@
 #include <unistd.h>
 #include <signal.h>
 #include "errExit.h"
+#include <stdlib.h>
 
 // the FIFO pathname
 char *path2ServerFIFO;
 // the file descriptors for the FIFO
 int serverFIFO, serverFIFO_extra;
+
+typedef struct test{
+        int a;
+        char b[2];
+} test;
 
 // the quit function closes the file descriptors for the FIFO,
 // and removes the FIFO from the file system
@@ -33,7 +39,10 @@ void quit(int sig) {
     _exit(0);
 }
 
+
 int main (int argc, char *argv[]) {
+    
+
     // Check command line input arguments
     // The program only wants a FIFO pathname
     if (argc != 2) {
@@ -72,11 +81,11 @@ int main (int argc, char *argv[]) {
         errExit("open write-only failed");
 
     int bR = -1;
-    int v [] = {0, 1};
+    test * prova = (test *)malloc(sizeof(test));
     do {
         printf("<Server> waiting for vector [a,b]...\n");
         // Read 2 integers from the FIFO.
-        bR = read(serverFIFO, &v, sizeof(v));
+        bR = read(serverFIFO, prova, sizeof(test));
 
         // remove the alarm
         alarm(0);
