@@ -116,7 +116,7 @@ int main(int argc, char * argv[]) {
             if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
                 ErrExit("mkfifo failed");
             // Apri in sola lettura
-            if ((fdFIFO = open(path_FIFO, O_RDWR)) == -1)
+            if ((fdFIFO = open(path_FIFO, O_RDONLY | O_NONBLOCK)) == -1)
                 ErrExit("open failed");
             //printf("%i", fdFIFO);
 
@@ -141,29 +141,6 @@ int main(int argc, char * argv[]) {
                 printf("<PID %i> Passato il semaforo Ack.\n", getpid());
                 #endif
                 
-                Pid_message * current_pid_message = pid_message;
-                Pid_message * prev = pid_message;
-
-                #ifdef DEBUG
-                printf("<PID %i> LIST: \n", getpid());
-                #endif
-                while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
-                    // Controllo che il message id sia ancora in lista
-                    if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
-                        prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
-                        current_pid_message = prev;                                       
-                    }
-                    #ifdef DEBUG
-                    printf("<PID> %i->",current_pid_message->message.message_id);
-                    #endif
-                    prev = current_pid_message;   
-                    current_pid_message = current_pid_message->next;
-                }    
-                
-                #ifdef DEBUG
-                printf("\n");
-                #endif
-                
                 
                 // Trovo la prima riga libera su Acklist
                 int j = 0;
@@ -181,6 +158,9 @@ int main(int argc, char * argv[]) {
                 int bR;
                 Acknowledgment acknowledgment;
                 do{
+                    #ifdef DEBUG
+                    printf("read fifo: %s \n", path_FIFO);
+                    #endif
                     Message * message = (Message *)malloc (sizeof(Message));
                     bR = read(fdFIFO, message, sizeof(Message));
                     if (bR == -1){
@@ -194,6 +174,33 @@ int main(int argc, char * argv[]) {
                         printf("<PID %i> I messaggi da leggere sono finiti\n", getpid());
                         #endif
                     } else {
+                        #ifdef DEBUG
+                        printf("<PID %i> Messaggio consegnato\n", getpid());
+                        #endif
+                        
+                        Pid_message * current_pid_message = pid_message;
+                        Pid_message * prev = pid_message;
+
+                        #ifdef DEBUG
+                        printf("<PID %i> LIST: \n", getpid());
+                        #endif
+                        while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
+                            // Controllo che il message id sia ancora in lista
+                            if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
+                                prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
+                                current_pid_message = prev;                                       
+                            }
+                            #ifdef DEBUG
+                            printf("<PID> %i->",current_pid_message->message.message_id);
+                            #endif
+                            prev = current_pid_message;   
+                            current_pid_message = current_pid_message->next;
+                        }    
+                        
+                        #ifdef DEBUG
+                        printf("\n");
+                        #endif
+
                         // Scrivi sull'Acknowledge_list
                         acknowledgment.message_id = current_pid_message->message.message_id;
                         acknowledgment.pid_receiver = current_pid_message->message.pid_receiver;
@@ -234,8 +241,16 @@ int main(int argc, char * argv[]) {
                 // TODO: binary semaphore per la board
                 for (int i = 0; i < BOARD_DIM; i++)
                     for(int j = 0; j < BOARD_DIM; j++)
-                        if(Board->Board[i][j] == getpid())
-                            printf("%i %i %i msgs: \n", getpid(), i, j);
+                        if(Board->Board[i][j] == getpid()){
+                            printf("%i %i %i msgs: ", getpid(), i, j);
+                            Pid_message * current = pid_message;
+                            while (current->next != NULL){
+                                printf("%i ", current->next->message.message_id);
+                                current = current->next;
+                            }
+                            printf("\n");
+
+                        }
                 
                 // Controllo di che sial il 5 device per stampare la stringa finale
                 if (pid[0] != 0 && pid[1] != 0 && pid[2] != 0 && pid[3] != 0 && pid[4] == 0){
@@ -354,6 +369,7 @@ int main(int argc, char * argv[]) {
     remove_semaphore(semidBoard);
     // Rimozione semafori acknowledge_list
     remove_semaphore(semidAck);
+
 
     return 0;
 }

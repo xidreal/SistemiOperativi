@@ -44,8 +44,6 @@ int main(int argc, char * argv[]) {
     // messaggio
     printf("Inserire il testo del messaggio: ");
     scanf("%s", this_message.message);
-    // fgets(this_message.message, sizeof(this_message.message), stdin);
-    // this_message.message[strlen(this_message.message)-1] = '\0';
 
     // message_id
     float max_dist = 0;
@@ -82,12 +80,14 @@ int main(int argc, char * argv[]) {
     
     // write su FIFO
     int bW = write(deviceFIFO, &this_message, sizeof(Message));
-    if (bW == -1){
+    if (bW == -1 || bW != sizeof(Message)){
         #ifdef DEBUG
         printf("<PID %i> La FIFO potrebbe essere danneggiata\n", getpid());
         #endif
         ErrExit("Write failed");
     }
+
+    close(deviceFIFO);
 
     return 0;
 }
