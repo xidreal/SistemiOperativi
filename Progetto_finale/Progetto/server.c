@@ -18,7 +18,7 @@
 #include <sys/wait.h>
 
 #define DEBUG
-//#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
+#define VIEWBOARD // Visualizza spostamenti sulla board grafica 
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 
 int main(int argc, char * argv[]) {
@@ -141,17 +141,13 @@ int main(int argc, char * argv[]) {
                 printf("<PID %i> Passato il semaforo Ack.\n", getpid());
                 #endif
                 
-                
                 // Trovo la prima riga libera su Acklist
                 int j = 0;
-                
                 Acknowledgment  currentAck;
-                
                 while((AcknowledgeList -> Acknowledgment_List[j]).message_id > 0 && j < ACK_LIST_DIM){
                     j++;
                 }
                 currentAck = AcknowledgeList -> Acknowledgment_List[j];
-                
                 j = 0; // reinizializza i
                 
                 // READ della fifo
@@ -193,6 +189,7 @@ int main(int argc, char * argv[]) {
                             #ifdef DEBUG
                             printf("<PID> %i->",current_pid_message->message.message_id);
                             #endif
+
                             prev = current_pid_message;   
                             current_pid_message = current_pid_message->next;
                         }    
@@ -207,7 +204,16 @@ int main(int argc, char * argv[]) {
                         acknowledgment.pid_sender = current_pid_message->message.pid_sender;
                         acknowledgment.timestamp = time(NULL);
                         currentAck = acknowledgment;
-                        // TODO: ricerca nuova riga disponibile in Acknowledge_list
+
+                        // Cerca una riga libera in acknowledge_list
+                        int j = 0;
+                        Acknowledgment  currentAck;
+                        while((AcknowledgeList -> Acknowledgment_List[j]).message_id > 0 && j < ACK_LIST_DIM){
+                            j++;
+                        }
+                        currentAck = AcknowledgeList -> Acknowledgment_List[j];
+                        j = 0; // reinizializza i
+
                         //currentAck = AcknowledgeList -> Acknowledgment_List[i++];
                         Pid_message * newPidMessage = (Pid_message *)malloc(sizeof(Pid_message));
                         newPidMessage->message.max_distance = message->max_distance;
@@ -217,28 +223,74 @@ int main(int argc, char * argv[]) {
                         strcpy(newPidMessage->message.message, message->message);
 
                         current_pid_message->next = newPidMessage;
+
+
+
                     }
 
                 } while(bR > 0);
 
-                // WRITE su acknowledge-list
+                // Invio messaggio
+
+                // cerco il la posizione del pid attuale
+                for (int i = 0; i < BOARD_DIM; i++){
+                    for(int j = 0; j < BOARD_DIM; j++){
+                        if(Board->Board[i][j] != getpid()){
+                            x = i; 
+                            y = j; 
+                        }
+                    }
+                }
+                
+                
+                for (int i = 0; i < BOARD_DIM; i++){
+                    for(int j = 0; j < BOARD_DIM; j++){
+                        if(Board->Board[i][j] != getpid() && Board->Board[i][j] != 0){
+                            if(message_deliverbale(x, y, i, j)){
+                                Pid_message * current = pid_message;
+                                while (current->next != NULL){
+                                    int j = 0;
+                                    Acknowledgment  currentAck;
+                                    while(AcknowledgeList -> Acknowledgment_List[j].message_id > 0 && j < ACK_LIST_DIM){
+                                        if(AcknowledgeList -> Acknowledgment_List[j].message_id == current->message.message_id &&
+                                            AcknowledgeList -> Acknowledgment_List[j].pid_receiver == current->message.pid_receiver)
+                                            break;
+                                        j++;
+                                    }
+                                    // Se tutte le condizioni sono sodisfatte
+                                    if (j == ACK_LIST_DIM){
+                                        send_message(Board->Board[i][j], current->message);
+                                    }
+                                    
+                                    current = current->next;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+          
+      
                 semOp(semidAck, 0, 1);
 
                 // MOVIMENTO
                 if(i != 0)
                     Board -> Board[x][y]= 0;
                 if (Board -> Board[current->x][current->y] == 0){
-                    // Se la posizione è libera allora scrivi il pid in tale poszione
+                    // Se la posizione è libera allora scrivi il pid in tale poszione e aggiorna i valori di x e y
                     Board -> Board[current->x][current->y] = getpid();
+                    x = current->x;
+                    y = current->y;
+                    i++;
                 }
 
-                //printf("PID %i %i %i %i %i \n", pid[0], pid[1], pid[2], pid[3],pid[4]);
                 
                 // controllo che sial il 1 device per stampare la stringa iniziale
                 if (pid[0] == 0)
                     printf("# Step %i: device positions ########################\n", step++);
               
-                // TODO: binary semaphore per la board
+                
                 for (int i = 0; i < BOARD_DIM; i++)
                     for(int j = 0; j < BOARD_DIM; j++)
                         if(Board->Board[i][j] == getpid()){
@@ -252,15 +304,12 @@ int main(int argc, char * argv[]) {
 
                         }
                 
-                // Controllo di che sial il 5 device per stampare la stringa finale
+                // Controllo di che sial il 5 device per stampare la stringa finale altrimenti apro il prossimo semaforo
                 if (pid[0] != 0 && pid[1] != 0 && pid[2] != 0 && pid[3] != 0 && pid[4] == 0){
                     printf("#############################################\n\n");
                 } else 
                     semOp(semidBoard, pid_i+1, 1); // libera il fgilio i + 1 
-                
-                x = current->x;
-                y = current->y;
-                i++;
+
 
                 #ifdef REPEATPOSITION
                 if (current->next == NULL)
