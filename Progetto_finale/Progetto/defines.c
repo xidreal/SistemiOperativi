@@ -7,6 +7,12 @@
 #include "shared_memory.h"
 #include <unistd.h> 
 #include <stdio.h>
+#include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include "err_exit.h"
+#include <string.h>
 
 void file_to_list(Position * position_pid[], int file){
     // Pointer ausiliario per lo scorrimento della lista posizione
@@ -46,13 +52,45 @@ void file_to_list(Position * position_pid[], int file){
                 j += 2;
                 new_position -> next = NULL;
 
-                current->next = new_position;
-                
+                current->next = new_position;   
             }
-            
         }
     } while (bR > 0);
 
     // close the file descriptor
     close(file);
+}
+
+int message_deliverbale(int x, int y, int i, int j, int distance){
+    if (sqrt(pow(x-i, 2) + pow(y-j, 2)) <= distance)
+        return 1;
+    
+    return 0;
+}
+
+void send_message(pid_t pid, Message message){
+    int fdFIFO; 
+    // Crea la FIFO legata al Device
+    // Crea la path della FIFO del device
+    char path_FIFO[15+10] = "/tmp/dev_fifo.";
+    char pid2string[10];
+    sprintf(pid2string, "%d", pid);
+    strcat(path_FIFO, pid2string);
+
+    //modifica il pid_sender e il pid_receiver
+    message.pid_receiver = pid;
+    message.pid_sender = getpid();
+    
+    // Crea la FIFO
+    // Apri in sola lettura
+    printf("%s\n", path_FIFO);
+    if ((fdFIFO = open(path_FIFO, O_WRONLY)) == -1)
+        ErrExit("open failed");
+    
+    int bW = write (fdFIFO, &message, sizeof(Message));
+    if(bW == -1 || bW != sizeof(Message)){
+        ErrExit("write failed");
+    }
+
+    close(fdFIFO);
 }

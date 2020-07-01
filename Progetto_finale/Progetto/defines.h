@@ -38,3 +38,9 @@ typedef struct {
 
 // Trasfora il file passato in liste di posizioni per ogni device
 void file_to_list(Position * position_pid[], int file);
+
+// Controlla che due punti siano sotto una certa distanza
+int message_deliverbale(int x, int y, int i, int j, int distance);
+
+// Iniva il messaggio ad un PID con un certo device
+void send_message(pid_t pid, Message message);
