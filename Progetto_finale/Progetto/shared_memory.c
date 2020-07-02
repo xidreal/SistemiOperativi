@@ -4,6 +4,7 @@
 
 #include "err_exit.h"
 #include "shared_memory.h"
+#include <stdio.h>
 
 int alloc_shared_memory(key_t shmKey, size_t size) {
     // get, or create, a shared memory segment
@@ -37,13 +38,15 @@ void remove_shared_memory(int shmid) {
 
 int messageID_in_Acknowledgelist(int message_id, AckList * AcknowledgeList ){
     int i = 0;
-    for (; &AcknowledgeList -> Acknowledgment_List[i+1] != NULL && 
-        AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM; 
-        i++);
+    for (; AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM; i++); // Trova la riga di un determinato message id
+    printf("%i == %i, %i \n", AcknowledgeList -> Acknowledgment_List[i].message_id, message_id, i);
     
-    if (AcknowledgeList -> Acknowledgment_List[i].message_id == message_id)
-        return 1;
-    else
-        return 0;
+    if (AcknowledgeList -> Acknowledgment_List[i].timestamp == 0 && message_id != 0){
+        printf("Messaggio cancellabile, message_id = %i\n", message_id);
+        return 0; // il message_id non è disponibile in acklist
+    } else{ 
+        printf("Messaggio non cancellabile, message_id = %i\n", message_id);
+        return 1; // Il message_id è acora disponiobile
+    }
     
 }

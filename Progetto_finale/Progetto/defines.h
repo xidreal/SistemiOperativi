@@ -36,6 +36,11 @@ typedef struct {
     time_t timestamp;
 } Acknowledgment;
 
+typedef struct{
+    int counter;
+    int index[5];
+} AckManage;
+
 // Trasfora il file passato in liste di posizioni per ogni device
 void file_to_list(Position * position_pid[], int file);
 

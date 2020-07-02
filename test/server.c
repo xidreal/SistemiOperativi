@@ -19,45 +19,17 @@
 
 int main(int argc, char * args[]){
 
-    int fdFIFO; 
-
-    // Crea la FIFO legata al Device
-    // Crea la path della FIFO del device
-    char path_FIFO[15+10] = "/tmp/dev_fifo.";
-    char pid2string[10];
-    sprintf(pid2string, "%d", getpid());
-    strcat(path_FIFO, pid2string);
-
-    // Crea la FIFO
-    if (mkfifo(path_FIFO, S_IRUSR | S_IWUSR | S_IWGRP) == -1)
-        ErrExit("mkfifo failed");
-    // Apri in sola lettura
-    if ((fdFIFO = open(path_FIFO, O_RDWR)) == -1)
-        ErrExit("open failed");
-    //printf("%i", fdFIFO);
-    int bR;
-
-    do{
+    while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
+        // Controllo che il message_id sia ancora in lista
+        if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
+            prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
+            current_pid_message = prev;                                       
+        }
         #ifdef DEBUG
-        printf("read fifo: %s \n", path_FIFO);
+        printf("<PID> %i->",current_pid_message->message.message_id);
         #endif
-        Message * message = (Message *)malloc (sizeof(Message));
-        bR = read(fdFIFO, message, sizeof(Message));
-        if (bR == -1){
-            #ifdef DEBUG
-            printf("<PID %i> La FIFO potrebbe essere danneggiata\n", getpid());
-            #endif
-            ErrExit("read failed");
-        }
-        if (bR != sizeof(Message) || bR == 0){
-            #ifdef DEBUG
-            printf("<PID %i> I messaggi da leggere sono finiti\n", getpid());
-            #endif
-        } else {
-            printf("%f", message->max_distance);
-        }
-
-    } while(bR > 0);
-
-    return 0;
+        
+        prev = current_pid_message;   
+        current_pid_message = current_pid_message->next;
+    }    
 }
