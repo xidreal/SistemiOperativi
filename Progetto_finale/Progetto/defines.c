@@ -2,7 +2,6 @@
 /// @brief Contiene l'implementazione delle funzioni
 ///         specifiche del progetto.
 
-
 #include "defines.h"
 #include "shared_memory.h"
 #include <unistd.h> 
@@ -68,29 +67,4 @@ int message_deliverbale(int x, int y, int i, int j, int distance){
     return 0;
 }
 
-void send_message(pid_t pid, Message message){
-    int fdFIFO; 
-    // Crea la FIFO legata al Device
-    // Crea la path della FIFO del device
-    char path_FIFO[15+10] = "/tmp/dev_fifo.";
-    char pid2string[10];
-    sprintf(pid2string, "%d", pid);
-    strcat(path_FIFO, pid2string);
 
-    //modifica il pid_sender e il pid_receiver
-    message.pid_receiver = pid;
-    message.pid_sender = getpid();
-    
-    // Crea la FIFO
-    // Apri in sola lettura
-    printf("%s\n", path_FIFO);
-    if ((fdFIFO = open(path_FIFO, O_WRONLY)) == -1)
-        ErrExit("open failed");
-    
-    int bW = write (fdFIFO, &message, sizeof(Message));
-    if(bW == -1 || bW != sizeof(Message)){
-        ErrExit("write failed");
-    }
-
-    close(fdFIFO);
-}

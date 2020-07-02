@@ -7,3 +7,6 @@
 #pragma once
 
 char * path2fifo(pid_t pid);
+
+// Iniva il messaggio ad un PID con un certo device
+void send_message(pid_t pid, Message message);

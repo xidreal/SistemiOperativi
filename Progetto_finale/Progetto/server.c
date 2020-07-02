@@ -133,11 +133,6 @@ int main(int argc, char * argv[]) {
 
             while (1){
 
-                semOp(semidBoard, pid_i, -1); // entra il figlio i
-                #ifdef DEBUG
-                printf("<PID %i> Passato il semaforo Board.\n", getpid());
-                #endif
-                semOp(semidAck, 0, -1); // entro nella sezione critica dell' Acknowlodgement List
                 #ifdef DEBUG
                 printf("<PID %i> Passato il semaforo Ack.\n", getpid());
                 #endif
@@ -179,6 +174,7 @@ int main(int argc, char * argv[]) {
                         Pid_message * current_pid_message = pid_message;
                         Pid_message * prev = pid_message;
 
+                        semOp(semidAck, 0, -1); // entro nella sezione critica dell' Acknowlodgement List
                         #ifdef DEBUG
                         printf("<PID %i> LIST: \n", getpid());
                         #endif
@@ -199,7 +195,7 @@ int main(int argc, char * argv[]) {
                         #ifdef DEBUG
                         printf("\n");
                         #endif
-
+                        
                         // Scrivi sulla lista dei device
                         current_pid_message->next = (Pid_message *)malloc(sizeof(Pid_message));
                         current_pid_message->next->message.max_distance = message->max_distance;
@@ -209,7 +205,7 @@ int main(int argc, char * argv[]) {
                         current_pid_message->next->next = NULL;
                         strcpy(current_pid_message->message.message, message->message);
                         
-
+                        
                         // Trovo la prima riga libera su Acklist
                         int AckLstIndex = 0;
                         while((AcknowledgeList -> Acknowledgment_List[AckLstIndex]).message_id > 0 && AckLstIndex  < ACK_LIST_DIM){
@@ -222,21 +218,22 @@ int main(int argc, char * argv[]) {
                         AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_sender = message->pid_sender;
                         AcknowledgeList -> Acknowledgment_List[AckLstIndex].timestamp = time(NULL);
                         //(AcknowledgeList -> Acknowledgment_List[AckLstIndex]) = acknowledgment;
-                       
                     
                     }
 
                 } while(bR > 0);
 
+                semOp(semidAck, 0, 1); 
+
                 // Invio messaggio
-                
+                semOp(semidBoard, pid_i, -1); // entra il figlio i
                 int current_x;
                 int current_y;
 
                 // cerco il la posizione del pid attuale
                 for (int i = 0; i < BOARD_DIM; i++){
                     for(int j = 0; j < BOARD_DIM; j++){
-                        if(Board->Board[i][j] != getpid()){
+                        if(Board->Board[i][j] == getpid()){
                             current_x = i; 
                             current_y = j; 
                         }
@@ -257,28 +254,33 @@ int main(int argc, char * argv[]) {
                             Pid_message * current = pid_message;
                             while (current->next != NULL){
                                 // Controlla che il messaggio rientri nel raggio d'azione dato dalla max_dist del messaggio correntemente analizzato in devicelist
-                                if(message_deliverbale(x, y, i, j, current->next->message.max_distance)){
+                              
+                                if(message_deliverbale(current_x, current_y, i, j, current->next->message.max_distance)){
                                 
                                     #ifdef DEBUG
-                                    printf("Messagio spedibile \n");
+                                    printf("<%i> Messagio spedibile \n", getpid());
                                     #endif
 
+                                    semOp(semidAck, 0, -1); 
                                     int AckLstIndex = 0;
                                     
-                                    // Controlla che il device corrente non abbia già inviato lo stesso messaggio al device con lo stesso pid_sender
-                                    while(AckLstIndex < ACK_LIST_DIM){
+                                    // Controlla che il messaggio non sia già stato ricevuto dal device selezionato per l'nvio
+                                    // o che non sia stato già inviato dal medesimo device 
+                                  
+                                    while(AckLstIndex < ACK_LIST_DIM && 
+                                            !(current->next->message.message_id == AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id &&
+                                            (/*getpid() == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_sender  ||*/
+                                            Board->Board[i][j] == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_receiver))){
                                         
-                                        if(current->next->message.message_id == AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id &&
-                                            getpid() == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_sender && 
-                                            current->next->message.pid_receiver == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_receiver){
-                                            break;
-                                        }
                                         AckLstIndex++;
                                     }
                                     
+                                    semOp(semidAck, 0, 1); 
+
                                     // Se tutte le condizioni sono sodisfatte
                                     if (AckLstIndex == ACK_LIST_DIM){
                                         send_message(Board->Board[i][j], current->next->message);
+                                        
                                     }
                                     
                                 }
@@ -290,9 +292,6 @@ int main(int argc, char * argv[]) {
                     }
                 }
                 
-                
-      
-                semOp(semidAck, 0, 1);
 
                 // MOVIMENTO
                 if(i != 0)
@@ -343,6 +342,25 @@ int main(int argc, char * argv[]) {
         }
     }
 
+    pid_t pid = fork();
+
+    if (pid == -1){
+            ErrExit("Fork failed");
+        }
+
+        // Codice del Ack-Manager
+        if (pid == 0){
+            semOp(semidAck, 0, -1);
+            int AckLstIndex = 0;
+            while (AckLstIndex < ACK_LIST_DIM){
+                //AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_receiver
+            }
+
+            semOp(semidAck, 0, 1); 
+        }
+
+
+
     int step = 0;
 
     while(1){
@@ -373,7 +391,7 @@ int main(int argc, char * argv[]) {
         ErrExit("semctl SETALL failed");
 
         semOp(semidAck, 0, -1);
-        #ifdef VIEWACKLIST
+        #ifdef VIEWACKLIST // stampa acknowledge list
         int AckLstIndex = 0;
         while (AckLstIndex < 20){
             printf("%i | %i | %i | %ld\n",AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_sender,
