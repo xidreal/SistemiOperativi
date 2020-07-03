@@ -61,10 +61,21 @@ void file_to_list(Position * position_pid[], int file){
 }
 
 int message_deliverbale(int x, int y, int i, int j, int distance){
-    if (sqrt(pow(x-i, 2) + pow(y-j, 2)) <= distance)
+    if (sqrt(pow(x-i, 2) + pow(y-j, 2)) <= distance){
+        printf("Deliverable \n");
         return 1;
+    }
     
     return 0;
 }
 
+void print_list(Pid_message * head){
+    printf("%i msgs: ", getpid());
+    Pid_message * current = head;
+    while (current->next != NULL){
+        printf("%i ", current->message.message_id);
+        current = current->next;
+    }
+    printf("\n");
+}
 

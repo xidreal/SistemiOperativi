@@ -38,11 +38,12 @@ void remove_shared_memory(int shmid) {
 
 int messageID_in_Acknowledgelist(int message_id, AckList * AcknowledgeList ){
     int i = 0;
-    for (; AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM; i++); // Trova la riga di un determinato message id
+    while(AcknowledgeList -> Acknowledgment_List[i].message_id != message_id && i < ACK_LIST_DIM) // Trova la riga di un determinato message id
+        i++;
     //printf("%i == %i, %i \n", AcknowledgeList -> Acknowledgment_List[i].message_id, message_id, i);
     
-    if (AcknowledgeList -> Acknowledgment_List[i].timestamp == 0 && message_id != 0){
-        //printf("Messaggio cancellabile, message_id = %i\n", message_id);
+    if ((AcknowledgeList -> Acknowledgment_List[i].timestamp == 0 && message_id != 0 )|| i == ACK_LIST_DIM || message_id == 0){
+        //printf("Messaggio scaduto, message_id = %i\n", message_id);
         return 0; // il message_id non è disponibile in acklist
     } else{ 
         //printf("Messaggio non cancellabile, message_id = %i\n", message_id);

@@ -7,7 +7,7 @@
 
 #include <sys/types.h>  // Tipi di variabile
 
-#define PACE_TIMER 2 // Tempo di esecuzione degli spostamenti in secondi
+
 #define BUFFER_SZ 21
 
 typedef struct Position{
@@ -46,4 +46,6 @@ void file_to_list(Position * position_pid[], int file);
 
 // Controlla che due punti siano sotto una certa distanza
 int message_deliverbale(int x, int y, int i, int j, int distance);
+
+void print_list(Pid_message * head);
 

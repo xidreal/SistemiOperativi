@@ -3,6 +3,7 @@
 ///         funzioni specifiche per la gestione delle FIFO.
 #include <string.h>
 #include <sys/types.h>
+#include "defines.h"
 
 #pragma once
 
