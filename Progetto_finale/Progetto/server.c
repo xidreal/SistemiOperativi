@@ -128,7 +128,9 @@ int main(int argc, char * argv[]) {
             Position * current = position_pid[pid_i]->next;
             // Creazione della lista di messaggi del device
             Pid_message * pid_message = (Pid_message *) malloc (sizeof(Pid_message)); 
-            pid_message->next =(Pid_message *) malloc(sizeof(Pid_message));
+            
+            
+            //pid_message->next =(Pid_message *) malloc(sizeof(Pid_message));
 
             int step = 0;
 
@@ -137,7 +139,57 @@ int main(int argc, char * argv[]) {
                 #ifdef DEBUG
                 printf("<PID %i> Passato il semaforo Ack.\n", getpid());
                 #endif
+
+                Pid_message * current_pid_message = pid_message;
+                Pid_message * prev = pid_message;
+                // Controlla che nell' Acklist sia ancora presente il messaggio con id del messaggio inviato
+                // se lo è ancora: scrivi il messagio sulla lista del device e sull AckList altrimenti eliminalo dalla lista dle Device
                 
+                // entro nella sezione critica dell' Acknowlodgement List
+                #ifdef DEBUG
+                semOp(semidAck, 0, -1);
+                printf("<PID %i> LIST: \n", getpid());
+                #endif
+                
+                semOp(semidAck, 0, -1);
+                while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messagge_id tra AcknowledgeList e Device list
+
+                    // Controllo che il message_id sia ancora in lista
+                    if(current_pid_message->message.message_id != 0 &&
+                        (messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1 )){ // Se non lo è elimino il messaggio dalla lista
+                        printf("<%i> Rimuovo messaggio dalla lista Device.\n", getpid());
+                        
+                        
+                        if(current_pid_message == prev && current_pid_message->next->next == NULL){ // Lista formata da un solo elemento
+                            printf("<%i>  Svuoto la testa della lista\n", getpid());
+                            pid_message =  (Pid_message *) malloc (sizeof(Pid_message));
+                            free(current_pid_message);
+                            current_pid_message = pid_message;
+                            prev = pid_message;
+                            break;
+                            
+                        } else if(current_pid_message == prev && current_pid_message->next->next != NULL){ // Lista di più elementi con nodo in cima alla lista
+                            printf("<%i>  Cambio la testa della lista\n", getpid()); 
+                            free(pid_message);
+                            pid_message = current_pid_message->next;
+                            break;
+
+                        } else { // Lista di più elementi
+                            printf("Elimino il nodo dalla lista\n"); 
+                            prev->next = current_pid_message->next; 
+                            free(current_pid_message);
+                            current_pid_message = prev;  
+                        }                  
+                    }
+                    #ifdef DEBUG
+                    printf("<PID> %i->",current_pid_message->message.message_id);
+                    #endif
+                    
+                    prev = current_pid_message; 
+                    current_pid_message = current_pid_message->next;
+                    
+                } 
+                semOp(semidAck, 0, 1);
                 //Acknowledgment * currentAck = &AcknowledgeList -> Acknowledgment_List[j];
 
                 //j = 0; // reinizializza i
@@ -170,35 +222,7 @@ int main(int argc, char * argv[]) {
                         printf("<PID %i> Messaggio consegnato\n", getpid());
                         #endif
                         // Se tutto è stato letto correttamente
-                        // Controlla che nell' Acklist sia ancora presente il messaggio con id del messaggio inviato
-                        // se lo è ancora: scrivi il messagio sulla lista del device e sull AckList altrimenti eliminalo dalla lista dle Device
-                        
-                        Pid_message * current_pid_message = pid_message;
-                        
-                        Pid_message * prev = pid_message;
-                        
-                        // entro nella sezione critica dell' Acknowlodgement List
-                        #ifdef DEBUG
-                        semOp(semidAck, 0, -1);
-                        printf("<PID %i> LIST: \n", getpid());
-                        #endif
-                        
-                  
-                        while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messagge_id tra AcknowledgeList e Device list
-                           
-                            // Controllo che il message_id sia ancora in lista
-                            if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
-                                printf("Rimuovo messaggio dalla lista Device.");
-                                prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
-                                current_pid_message = prev;                                     
-                            }
-                            //#ifdef DEBUG
-                            printf("<PID> %i->",current_pid_message->message.message_id);
-                            //#endif*/
-                            
-                            prev = current_pid_message; 
-                            current_pid_message = current_pid_message->next;
-                        }    
+                          
                         
                         #ifdef DEBUG
                         printf("\n");
@@ -206,12 +230,12 @@ int main(int argc, char * argv[]) {
                        
 
                         // Scrivi sulla lista dei device
+                       
+                        current_pid_message->message.max_distance = message->max_distance;
+                        current_pid_message->message.message_id = message->message_id;
+                        current_pid_message->message.pid_receiver = message->pid_receiver;
+                        current_pid_message->message.pid_sender = message->pid_sender;
                         current_pid_message->next = (Pid_message *)malloc(sizeof(Pid_message));
-                        current_pid_message->next->message.max_distance = message->max_distance;
-                        current_pid_message->next->message.message_id = message->message_id;
-                        current_pid_message->next->message.pid_receiver = message->pid_receiver;
-                        current_pid_message->next->message.pid_sender = message->pid_sender;
-                        current_pid_message->next->next = NULL;
                         strcpy(current_pid_message->message.message, message->message);
                         
                         
@@ -248,10 +272,6 @@ int main(int argc, char * argv[]) {
                         }
                     }
                 }
-                
-                Message * message = (Message *)malloc(sizeof(Message));
-                message->max_distance = 2;
-                message->message_id = 2;
 
                 for (int i = 0; i < BOARD_DIM; i++){
                     for(int j = 0; j < BOARD_DIM; j++){
@@ -259,41 +279,44 @@ int main(int argc, char * argv[]) {
                         // allora comincio a scorrere la lista dei messaggi del Device corrente
                         if(Board->Board[i][j] != getpid() && Board->Board[i][j] != 0){
                            
+                           
                             // Inizia a scorrere la lista di messaggi
                             Pid_message * current = pid_message;
                             while (current->next != NULL){
                                 // Controlla che il messaggio rientri nel raggio d'azione dato dalla max_dist del messaggio correntemente analizzato in devicelist
-                              
-                                if(message_deliverbale(current_x, current_y, i, j, current->next->message.max_distance)){
+                                semOp(semidAck, 0, -1); 
+                                if(message_deliverbale(current_x, current_y, i, j, current->message.max_distance) &&
+                                   messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList)){
                                     
-                                   
+                                    
                                     printf("<%i> Messagio spedibile \n", getpid());
                                    
 
-                                    semOp(semidAck, 0, -1); 
+                                    
                                     int AckLstIndex = 0;
                                     
                                     // Controlla che il messaggio non sia già stato ricevuto dal device selezionato per l'nvio
                                     // o che non sia stato già inviato dal medesimo device 
                                   
                                     while(AckLstIndex < ACK_LIST_DIM && 
-                                            !(current->next->message.message_id == AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id &&
+                                            !(current->message.message_id == AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id &&
                                             (/*getpid() == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_sender  ||*/
                                             Board->Board[i][j] == AcknowledgeList -> Acknowledgment_List[AckLstIndex].pid_receiver))){
                                         
                                         AckLstIndex++;
                                     }
                                     
-                                    semOp(semidAck, 0, 1); 
+                                    
 
                                     // Se tutte le condizioni sono sodisfatte
                                     if (AckLstIndex == ACK_LIST_DIM){
-                                        send_message(Board->Board[i][j], current->next->message);
+                                        send_message(Board->Board[i][j], current->message);
                                         
                                     }
                                     
                                 }
                                 current = current->next;
+                                semOp(semidAck, 0, 1); 
             
                             }
 
@@ -323,9 +346,9 @@ int main(int argc, char * argv[]) {
                     for(int j = 0; j < BOARD_DIM; j++)
                         if(Board->Board[i][j] == getpid()){
                             printf("%i %i %i msgs: ", getpid(), i, j);
-                            Pid_message * current = pid_message->next;
+                            Pid_message * current = pid_message;
                             while (current->next != NULL){
-                                printf("%i ", current->next->message.message_id);
+                                printf("%i ", current->message.message_id);
                                 current = current->next;
                             }
                             printf("\n");
@@ -389,8 +412,45 @@ int main(int argc, char * argv[]) {
         }
     }
 
-
     int step = 0;
+
+    // TEST
+    Message this_message1;
+    this_message1.pid_sender = getpid();
+    this_message1.pid_receiver = pid[1];
+    this_message1.message_id = 1;
+    strcpy( this_message1.message, "char");
+    this_message1.max_distance = 1;
+    char path_FIFO[15+10] = "/tmp/dev_fifo.";
+    char pid2string[10];
+    sprintf(pid2string, "%d", this_message1.pid_receiver);
+    strcat(path_FIFO, pid2string);
+    int deviceFIFO = open(path_FIFO, O_WRONLY);
+    if(deviceFIFO == -1)
+        ErrExit("Open FIFO failed");
+    int bW = write(deviceFIFO, &this_message1, sizeof(Message));
+    if (bW == -1 || bW != sizeof(Message)){
+        ErrExit("Write failed");
+    }
+    close(deviceFIFO);
+/*
+    // TEST 2
+    this_message1.pid_sender = getpid();
+    this_message1.pid_receiver = pid[2];
+    this_message1.message_id = 1;
+    strcpy( this_message1.message, "char");
+    this_message1.max_distance = 1;
+    sprintf(pid2string, "%d", this_message1.pid_receiver);
+    strcat(path_FIFO, pid2string);
+    deviceFIFO = open(path_FIFO, O_WRONLY);
+    if(deviceFIFO == -1)
+        ErrExit("Open FIFO failed");
+    bW = write(deviceFIFO, &this_message1, sizeof(Message));
+    if (bW == -1 || bW != sizeof(Message)){
+        ErrExit("Write failed");
+    }
+    close(deviceFIFO);
+    */
 
     while(1){
         sleep(PACE_TIMER);
