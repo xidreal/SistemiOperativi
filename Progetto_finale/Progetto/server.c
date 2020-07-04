@@ -26,6 +26,8 @@
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 #define VIEWACKLIST // Visualizza l'acknowledgelist
 
+pid_t pid[5];
+
 int main(int argc, char * argv[]) {
     
     if (argc != 3){
@@ -90,7 +92,7 @@ int main(int argc, char * argv[]) {
         ErrExit("semctl SETALL failed");
     
     // Creazione dei figli
-    pid_t pid[5];
+    
     for(int pid_i = 0; pid_i < 5; pid_i++){
         pid[pid_i] = fork(); 
         if (pid[pid_i] == -1){
@@ -126,7 +128,6 @@ int main(int argc, char * argv[]) {
             // Creazione della lista di messaggi del device
             Pid_message * pid_message = (Pid_message *) malloc (sizeof(Pid_message)); 
             
-            
             //pid_message->next =(Pid_message *) malloc(sizeof(Pid_message));
 
             int step = 0;
@@ -142,7 +143,7 @@ int main(int argc, char * argv[]) {
                 semOp(semid, SEM_ACK, -1);
                 while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messagge_id tra AcknowledgeList e Device list
 
-                    /*// Controllo che il message_id sia ancora in lista
+                    // Controllo che il message_id sia ancora in lista
                     if(current_pid_message->message.message_id != 0 &&
                         (messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1 )){ // Se non lo è elimino il messaggio dalla lista
                         printf("<%i> Rimuovo messaggio dalla lista Device.\n", getpid());
@@ -150,13 +151,12 @@ int main(int argc, char * argv[]) {
                         if(current_pid_message == prev && current_pid_message->next->next == NULL){ // Lista formata da un solo elemento
                             printf("<%i>  Svuoto la testa della lista\n", getpid());
                             pid_message =  (Pid_message *) malloc (sizeof(Pid_message));
-                            free(current_pid_message);
                             current_pid_message = pid_message;
                             prev = pid_message;
                             print_list(pid_message);
                             break;
                             
-                        } else if(current_pid_message == prev && current_pid_message->next->next != NULL){ // Lista di più elementi con nodo in cima alla lista
+                        } else if(current_pid_message == prev && current_pid_message->next->next != NULL){ // Lista di più elementi con nodo da rimuoverein cima alla lista
                             printf("<%i>  Cambio la testa della lista\n", getpid()); 
                             free(pid_message);
                             pid_message = current_pid_message->next;
@@ -168,9 +168,9 @@ int main(int argc, char * argv[]) {
                             prev->next = current_pid_message->next; 
                             free(current_pid_message);
                             current_pid_message = prev;  
-                             print_list(pid_message);
+                            print_list(pid_message);
                         }                  
-                    }*/
+                    }
 
                     prev = current_pid_message; 
                     current_pid_message = current_pid_message->next;
@@ -263,7 +263,7 @@ int main(int argc, char * argv[]) {
                                 if(message_deliverbale(current_x, current_y, i, j, current->message.max_distance) &&
                                    messageID_in_Acknowledgelist(current->message.message_id, AcknowledgeList) == 1){
                                    
-                                    printf("<%i> Messagio %i spedibile a %i\n", getpid(), current_pid_message->message.message_id, Board->Board[i][j] );
+                                    printf("<%i> Messagio %i spedibile a %i\n", getpid(), current->message.message_id, Board->Board[i][j] );
                                     printf("INFO SPEDIZIONE: da %i:%i a %i:%i \n", current_x, current_y, i, j);
                                     int AckLstIndex = 0;
                                     
@@ -320,12 +320,7 @@ int main(int argc, char * argv[]) {
                     for(int j = 0; j < BOARD_DIM; j++){
                         if(Board->Board[i][j] == getpid()){
                             printf("%i %i %i msgs: ", getpid(), i, j);
-                            Pid_message * current = pid_message;
-                            while (current->next != NULL){
-                                printf("%i ", current->message.message_id);
-                                current = current->next;
-                            }
-                            printf("\n");
+                            print_list(pid_message);
                         }
                     }
                 }
@@ -386,7 +381,7 @@ int main(int argc, char * argv[]) {
                         
                         // MARCATURA PER ELIMINAZIONE DA ACKNOWLEDGMENTLIST (impostando timestamp a 0)
 
-                        printf("Sto eleminando il messaggio. \n");
+                        printf("<ACK-MANAGER> Sto eleminando il messaggio. \n");
                         int message_id = AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id;
                         for(int i = 0; i < 5; i++){
                             int index = ackManage[message_id].index[i];
@@ -400,34 +395,20 @@ int main(int argc, char * argv[]) {
         }
     }
     
-    // TEST
-    sleep(2);
-    Message this_message1;
-    this_message1.pid_sender = getpid();
-    this_message1.pid_receiver = pid[0];
-    this_message1.message_id = 1;
-    strcpy( this_message1.message, "char");
-    this_message1.max_distance = 1;
-    char path_FIFO[15+10] = "/tmp/dev_fifo.";
-    char pid2string[10];
-    sprintf(pid2string, "%d", this_message1.pid_receiver);
-    strcat(path_FIFO, pid2string);
-    int deviceFIFO = open(path_FIFO, O_WRONLY);
-    if(deviceFIFO == -1)
-        ErrExit("Open FIFO failed");
-    int bW = write(deviceFIFO, &this_message1, sizeof(Message));
-    if (bW == -1 || bW != sizeof(Message)){
-        ErrExit("Write failed");
-    }
-    sleep(2);
-  
-    close(deviceFIFO);
-    
-    
-    
-    
+    // TEST Processo tester
+    int pid_test = fork();
+    if (pid_test == -1)
+        ErrExit("fork failed");
+    if (pid_test == 0)
+        test_process (0, 1, 7);
 
-   
+    // TEST Processo tester
+    pid_test = fork();
+    if (pid_test == -1)
+        ErrExit("fork failed");
+    if (pid_test == 0)
+        test_process (0, 2, 12);
+    
     while(1){
         sleep(PACE_TIMER);
         

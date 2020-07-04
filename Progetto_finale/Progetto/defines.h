@@ -7,7 +7,6 @@
 
 #include <sys/types.h>  // Tipi di variabile
 
-
 #define BUFFER_SZ 21
 
 typedef struct Position{
@@ -48,4 +47,6 @@ void file_to_list(Position * position_pid[], int file);
 int message_deliverbale(int x, int y, int i, int j, int distance);
 
 void print_list(Pid_message * head);
+
+void test_process(int pid_i, int message_id, int sec);
 
