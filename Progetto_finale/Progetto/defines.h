@@ -35,10 +35,18 @@ typedef struct {
     time_t timestamp;
 } Acknowledgment;
 
+// Struttura dati di supporto dell'ackmanger
 typedef struct{
     int counter;
     int index[5];
 } AckManage;
+
+typedef struct {
+    long mtype;
+    Acknowledgment acks [5];
+    char message [100];
+} AckMessage;
+
 
 // Trasfora il file passato in liste di posizioni per ogni device
 void file_to_list(Position * position_pid[], int file);

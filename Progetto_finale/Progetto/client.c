@@ -9,11 +9,27 @@
 #include "defines.h"
 #include "err_exit.h"
 #include <unistd.h>
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <sys/msg.h>
 
 #define DEBUG //attiva le stampe di DEBUG
 
 int main(int argc, char * argv[]) {
     
+    if (argc != 2){
+        printf("Usage: %s msg_queue_key file_posizioni\n", argv[0]);
+        ErrExit("Incorrect args value");
+    }
+
+    // Creo la coda di messaggi
+    int msqid;
+    key_t msg_queue_key = atoi(argv[1]);
+    if((msqid = msgget(msg_queue_key, S_IRUSR | S_IWUSR)) ==-1)
+        ErrExit("msgget failed");
+    printf("MSQID %i ---------------------------------------------", msqid);
+
     Message this_message;
     // Richiesta informazioni
     // Pid sender
@@ -36,8 +52,8 @@ int main(int argc, char * argv[]) {
     do {
         scanf("%i", &message_id);
         getchar();
-        if (message_id <= 0)
-            printf("Inserire un valore positivo: ");
+        if (message_id <= 0 || message_id > 20)
+            printf("Inserire un valore compreso tra 1 e 20: ");
     } while (message_id <= 0);
     this_message.message_id = message_id;
 
@@ -89,5 +105,15 @@ int main(int argc, char * argv[]) {
 
     close(deviceFIFO);
 
+    AckMessage * ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
+    size_t mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype); 
+    long mtype = message_id;
+
+    printf("Attendo ack %ld\n", mtype);
+
+    if(msgrcv(msqid, &ackMessage, mSize, message_id, 0)== -1)
+        ErrExit("msgsnd failed");
+
+    printf("%s", ackMessage->message);
     return 0;
 }

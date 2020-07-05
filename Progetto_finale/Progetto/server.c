@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "server_lib.h" // Funzioni ausiliarie specifiche del server
 
 #define SEM_ACK 5
 #define SEM_BOARD 6
@@ -27,6 +28,7 @@
 #define VIEWACKLIST // Visualizza l'acknowledgelist
 
 pid_t pid[5];
+Message messages[20];
 
 int main(int argc, char * argv[]) {
     
@@ -37,8 +39,16 @@ int main(int argc, char * argv[]) {
 
     // Creo la coda di messaggi
     int msqid;
-    key_t msg_queue_key = (key_t)atoi(argv[1]);
-    msqid = msgget(msg_queue_key, IPC_CREAT | S_IRUSR | S_IWUSR);
+    key_t msg_queue_key = atoi(argv[1]);
+    if (msg_queue_key <= 0) {
+        ErrExit("La msgkey deve essere maggiore di 0.");
+        exit(1);
+    }
+
+    if((msqid = msgget(msg_queue_key, IPC_CREAT | S_IRUSR | S_IWUSR)) == -1)
+        ErrExit("msgget failed");
+
+    printf("MSQID %i ---------------------------------------------\n", msqid);
 
     // Apro il file
     int file = open(argv[2], O_RDONLY);
@@ -150,9 +160,11 @@ int main(int argc, char * argv[]) {
                         
                         if(current_pid_message == prev && current_pid_message->next->next == NULL){ // Lista formata da un solo elemento
                             printf("<%i>  Svuoto la testa della lista\n", getpid());
+                            free(pid_message);
                             pid_message =  (Pid_message *) malloc (sizeof(Pid_message));
                             current_pid_message = pid_message;
                             prev = pid_message;
+                            pid_message->next = NULL;
                             print_list(pid_message);
                             break;
                             
@@ -197,10 +209,12 @@ int main(int argc, char * argv[]) {
 
                     } else { 
                         
+                        semOp(semid, SEM_ACK, -1); 
                         printf("<PID %i>Legge il messaggio %i\n", getpid(), message->message_id);
 
-                        // SCRIVI IL MESSAGGIO SULLA LISTA DEVICE ----------------------------------------------------------------
-                        
+                        // SCRIVI IL MESSAGGIO SULLA LISTA DEVICE  ----------------------------------------------------------------
+                        // e sulla lista globale
+
                         current_pid_message->message.max_distance = message->max_distance;
                         current_pid_message->message.message_id = message->message_id;
                         current_pid_message->message.pid_receiver = message->pid_receiver;
@@ -208,6 +222,8 @@ int main(int argc, char * argv[]) {
                         current_pid_message->next = (Pid_message *)malloc(sizeof(Pid_message));
                         strcpy(current_pid_message->message.message, message->message);
 
+                        strcpy(messages[(message->message_id)-1].message, message->message);
+                        
                         // SCRIVI IL MESSAGGIO SU ACKNOWLEDGELIST ----------------------------------------------------------------
 
                         // Trovo la prima riga libera su Acklist
@@ -246,6 +262,7 @@ int main(int argc, char * argv[]) {
                 
                 // Se trovo un device sulla board che non è questo Device 
                 // allora comincio a scorrere la lista dei messaggi del Device corrente
+                semOp(semid, SEM_ACK, -1); 
                 for (int i = 0; i < BOARD_DIM; i++){
                     for(int j = 0; j < BOARD_DIM; j++){
                         if(Board->Board[i][j] != getpid() && Board->Board[i][j] != 0){
@@ -254,8 +271,6 @@ int main(int argc, char * argv[]) {
                             Pid_message * current = pid_message;
                             while (current->next != NULL){
                                 
-                                semOp(semid, SEM_ACK, -1); 
-                               
                                 //printf("<%i> Messagio %i tentativo invio a %i \n", getpid(), current->message.message_id, Board->Board[i][j]);
                                 //printf("TENTATIVO SPEDIZIONE: %i:%i, %i:%i \n", current_x, current_y, i, j);
                                 // Controlla che il messaggio rientri nel raggio d'azione dato dalla max_dist
@@ -284,15 +299,15 @@ int main(int argc, char * argv[]) {
                                     }
                                     
                                 }
-                                current = current->next;
-                                semOp(semid, SEM_ACK, 1); 
+                                current = current->next;   
             
                             }
 
                         }
                     }
                 }
-
+                
+                semOp(semid, SEM_ACK, 1);
                 semOp(semid, pid_i, -1); // entra il figlio i
 
                 // MOVIMENTO --------------------------------------
@@ -359,8 +374,10 @@ int main(int argc, char * argv[]) {
 
         while(1){
             
+            AckMessage * ackMessage;
+            size_t mSize;
             AckManage ackManage[20] = {0};
-            
+
             semOp(semid, SEM_ACK, -1);
 
             int AckLstIndex = 0;
@@ -380,13 +397,34 @@ int main(int argc, char * argv[]) {
                     if (ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].counter == 5){
                         
                         // MARCATURA PER ELIMINAZIONE DA ACKNOWLEDGMENTLIST (impostando timestamp a 0)
+                        // E INVIO DELL'ACK SULLA QUEUE
+                        ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
+                        mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype);
 
-                        printf("<ACK-MANAGER> Sto eleminando il messaggio. \n");
                         int message_id = AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id;
+                        ackMessage->mtype = message_id;
+                        strcpy(ackMessage->message, messages[message_id-1].message);
+                        
+                        printf("<ACK-MANAGER> Sto eleminando il messaggio. \n");
+
                         for(int i = 0; i < 5; i++){
+                            
                             int index = ackManage[message_id].index[i];
+                            
+                            ackMessage->acks[i] = AcknowledgeList -> Acknowledgment_List[index];
+                            
                             AcknowledgeList -> Acknowledgment_List[index].timestamp = 0;
                         }
+
+                        //sorting_date(* ackMessage);
+
+                        printf("<ACK-MANAGER> Invio ack %ld \n", ackMessage->mtype);
+
+                        if(msgsnd(msqid, &ackMessage, mSize, 0) == -1)
+                            ErrExit("msgsnd failed");
+
+                        free(ackMessage);
+                        ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].counter = 0;
                     }
                 }
                 AckLstIndex++;
@@ -395,19 +433,24 @@ int main(int argc, char * argv[]) {
         }
     }
     
+    /*
     // TEST Processo tester
     int pid_test = fork();
     if (pid_test == -1)
         ErrExit("fork failed");
-    if (pid_test == 0)
-        test_process (0, 1, 7);
+    if (pid_test == 0){
+        test_process (0, 1, 4);
+        return 0;
+    }
 
     // TEST Processo tester
     pid_test = fork();
     if (pid_test == -1)
         ErrExit("fork failed");
-    if (pid_test == 0)
-        test_process (0, 2, 12);
+    if (pid_test == 0){
+        test_process (0, 2, 6);
+        return 0;
+    }*/
     
     while(1){
         sleep(PACE_TIMER);

@@ -13,7 +13,6 @@
 #include "err_exit.h"
 #include <string.h>
 
-extern pid_t pid[5];
 
 void file_to_list(Position * position_pid[], int file){
     // Pointer ausiliario per lo scorrimento della lista posizione
@@ -81,30 +80,4 @@ void print_list(Pid_message * head){
     printf("\n");
 }
 
-void test_process(int pid_i, int message_id, int sec){
-    
-    sleep(sec);
-    Message this_message1;
-    this_message1.pid_sender = getpid();
-    this_message1.pid_receiver = pid[pid_i];
-    this_message1.message_id = message_id; // TEST Processo tester
-    strcpy( this_message1.message, "char");
-    this_message1.max_distance = 1;
-    char path_FIFO[15+10] = "/tmp/dev_fifo.";
-    char pid2string[10];
-    sprintf(pid2string, "%d", this_message1.pid_receiver);
-    strcat(path_FIFO, pid2string);
-    int deviceFIFO = open(path_FIFO, O_WRONLY);
-    printf("TEST invio %i\n", this_message1.message_id);
-    if(deviceFIFO == -1)
-        ErrExit("Open FIFO failed");
-    int bW = write(deviceFIFO, &this_message1, sizeof(Message));
-    if (bW == -1 || bW != sizeof(Message)){
-        ErrExit("Write failed");
-    }
-  
-    if(close(deviceFIFO)==-1)
-        ErrExit("close failed");
-
-}
 
