@@ -95,7 +95,7 @@ int main(int argc, char * argv[]) {
 
     // Crea e inizializza i semafori
     int semid = semget(IPC_CREAT, 7, IPC_CREAT | S_IRUSR | S_IWUSR);
-    unsigned short semInitVal[] = {0, 0, 0, 0, 0, 1, 1, 1};
+    unsigned short semInitVal[] = {0, 0, 0, 0, 0, 1, 1};
     union semun arg;
     arg.array = semInitVal;
     if (semctl(semid, 0, SETALL, arg) == -1)
@@ -213,7 +213,6 @@ int main(int argc, char * argv[]) {
                         printf("<PID %i>Legge il messaggio %i\n", getpid(), message->message_id);
 
                         // SCRIVI IL MESSAGGIO SULLA LISTA DEVICE  ----------------------------------------------------------------
-                        // e sulla lista globale
 
                         current_pid_message->message.max_distance = message->max_distance;
                         current_pid_message->message.message_id = message->message_id;
@@ -221,8 +220,6 @@ int main(int argc, char * argv[]) {
                         current_pid_message->message.pid_sender = message->pid_sender;
                         current_pid_message->next = (Pid_message *)malloc(sizeof(Pid_message));
                         strcpy(current_pid_message->message.message, message->message);
-
-                        strcpy(messages[(message->message_id)-1].message, message->message);
                         
                         // SCRIVI IL MESSAGGIO SU ACKNOWLEDGELIST ----------------------------------------------------------------
 
@@ -375,14 +372,14 @@ int main(int argc, char * argv[]) {
         while(1){
             
             AckMessage * ackMessage;
-            size_t mSize;
+            //size_t mSize;
             AckManage ackManage[20] = {0};
 
             semOp(semid, SEM_ACK, -1);
 
             int AckLstIndex = 0;
 
-            // CONTROllO RICEZIONE -----------------------------------------------------------------------
+            // CONTROLLO RICEZIONE -----------------------------------------------------------------------
 
             // Scorri la lista
             while (AckLstIndex < ACK_LIST_DIM){
@@ -399,11 +396,10 @@ int main(int argc, char * argv[]) {
                         // MARCATURA PER ELIMINAZIONE DA ACKNOWLEDGMENTLIST (impostando timestamp a 0)
                         // E INVIO DELL'ACK SULLA QUEUE
                         ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
-                        mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype);
+                        //mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype);
 
                         int message_id = AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id;
                         ackMessage->mtype = message_id;
-                        strcpy(ackMessage->message, messages[message_id-1].message);
                         
                         printf("<ACK-MANAGER> Sto eleminando il messaggio. \n");
 
@@ -412,15 +408,17 @@ int main(int argc, char * argv[]) {
                             int index = ackManage[message_id].index[i];
                             
                             ackMessage->acks[i] = AcknowledgeList -> Acknowledgment_List[index];
+                            printf("<ACK-MANAGER> Acks: %i | %ld | %i | %i \n", ackMessage->acks[i].message_id,
+                            ackMessage->acks[i].timestamp, ackMessage->acks[i].pid_receiver, ackMessage->acks[i].pid_sender );
                             
                             AcknowledgeList -> Acknowledgment_List[index].timestamp = 0;
                         }
 
-                        //sorting_date(* ackMessage);
-
+                        sorting_date(ackMessage);
+                    
                         printf("<ACK-MANAGER> Invio ack %ld \n", ackMessage->mtype);
 
-                        if(msgsnd(msqid, &ackMessage, mSize, 0) == -1)
+                        if(msgsnd(msqid, ackMessage, sizeof(AckMessage), 0) == -1)
                             ErrExit("msgsnd failed");
 
                         free(ackMessage);
@@ -442,7 +440,7 @@ int main(int argc, char * argv[]) {
         test_process (0, 1, 4);
         return 0;
     }
-
+    
     // TEST Processo tester
     pid_test = fork();
     if (pid_test == -1)
@@ -495,3 +493,4 @@ int main(int argc, char * argv[]) {
 
     return 0;
 }
+

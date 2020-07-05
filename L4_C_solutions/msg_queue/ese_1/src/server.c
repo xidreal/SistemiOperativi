@@ -62,7 +62,7 @@ int main (int argc, char *argv[]) {
     while (1) {
         // read a message from the message queue
         size_t mSize = sizeof(order) - sizeof(order.mtype);
-        if(msgrcv(msqid, &order, mSize, 0, 0) == -1)
+        if(msgrcv(msqid, order, mSize, 0, 0) == -1)
             errExit("msgrcv failed");
         // print the order on standard output
         printOrder(&order);

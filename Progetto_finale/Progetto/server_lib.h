@@ -7,4 +7,4 @@
 
 void test_process(int pid_i, int message_id, int sec);
 
-void sorting_date(AckMessage ackMessage);
+void sorting_date(AckMessage * ackMessage);

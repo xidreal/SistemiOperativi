@@ -44,7 +44,6 @@ typedef struct{
 typedef struct {
     long mtype;
     Acknowledgment acks [5];
-    char message [100];
 } AckMessage;
 
 

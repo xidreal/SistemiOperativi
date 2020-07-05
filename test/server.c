@@ -16,20 +16,32 @@
 
 #define DEBUG
 
+typedef struct{
+    long mtype;
+    int test;
+} AckMessage;
 
-int main(int argc, char * args[]){
+int main(int argc, char * argv[]){
 
-    while(current_pid_message->next != NULL){ // Scorri la lista fino alla fine e controlla i messaggi tra AcknowledgeList e Device list
-        // Controllo che il message_id sia ancora in lista
-        if(messageID_in_Acknowledgelist(current_pid_message->message.message_id, AcknowledgeList) != 1){ // Se non lo è elimino il messaggio dalla lista
-            prev->next = current_pid_message->next; // Eliminazione del message in lista non più presente nell'AckowledgeList 
-            current_pid_message = prev;                                       
-        }
-        #ifdef DEBUG
-        printf("<PID> %i->",current_pid_message->message.message_id);
-        #endif
-        
-        prev = current_pid_message;   
-        current_pid_message = current_pid_message->next;
-    }    
+     // Creo la coda di messaggi
+    int msqid;
+    key_t msg_queue_key = atoi(argv[1]);
+    if (msg_queue_key <= 0) {
+        ErrExit("La msgkey deve essere maggiore di 0.");
+        exit(1);
+    }
+
+    if((msqid = msgget(msg_queue_key, IPC_CREAT | S_IRUSR | S_IWUSR)) == -1)
+        ErrExit("msgget failed");
+
+    printf("MSQID %i ---------------------------------------------\n", msqid);
+    
+    AckMessage *ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
+    size_t msize = sizeof(ackMessage) - sizeof(ackMessage->mtype);
+    ackMessage->mtype = 1; 
+    ackMessage->test = 6;
+    int test_msgsnd = msgsnd(msqid, ackMessage, sizeof(AckMessage), 0);
+    if ( test_msgsnd== -1)
+        ErrExit("msgsnd failed");
+    printf("messaggio inviato %i", test_msgsnd);
 }

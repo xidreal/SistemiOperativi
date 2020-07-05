@@ -44,7 +44,7 @@ void test_process(int pid_i, int message_id, int sec){
 
 }
 
-void sorting_date(AckMessage ackMessage){
+void sorting_date(AckMessage * ackMessage){
 
     Acknowledgment swap;
 
@@ -52,11 +52,11 @@ void sorting_date(AckMessage ackMessage){
     {
         for (int j = 0 ; j < 5 - i - 1; j++)
         {
-        if (ackMessage.acks[j].timestamp > ackMessage.acks[j+1].timestamp) /* For decreasing order use < */
+        if (ackMessage->acks[j].timestamp > ackMessage->acks[j+1].timestamp) 
         {
-            swap       = ackMessage.acks[j];
-            ackMessage.acks[j]   = ackMessage.acks[j+1];
-            ackMessage.acks[j+1] = swap;
+            swap = ackMessage->acks[j];
+            ackMessage->acks[j] = ackMessage->acks[j+1];
+            ackMessage->acks[j+1] = swap;
         }
         }
     }

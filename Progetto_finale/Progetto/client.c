@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/msg.h>
 
+
 #define DEBUG //attiva le stampe di DEBUG
 
 int main(int argc, char * argv[]) {
@@ -28,7 +29,7 @@ int main(int argc, char * argv[]) {
     key_t msg_queue_key = atoi(argv[1]);
     if((msqid = msgget(msg_queue_key, S_IRUSR | S_IWUSR)) ==-1)
         ErrExit("msgget failed");
-    printf("MSQID %i ---------------------------------------------", msqid);
+    printf("MSQID %i ---------------------------------------------\n", msqid);
 
     Message this_message;
     // Richiesta informazioni
@@ -106,14 +107,34 @@ int main(int argc, char * argv[]) {
     close(deviceFIFO);
 
     AckMessage * ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
-    size_t mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype); 
+    //size_t mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype); 
     long mtype = message_id;
 
     printf("Attendo ack %ld\n", mtype);
 
-    if(msgrcv(msqid, &ackMessage, mSize, message_id, 0)== -1)
+    int bR = msgrcv(msqid, ackMessage, sizeof(AckMessage), message_id, 0);
+    if(bR == -1)
         ErrExit("msgsnd failed");
+    if(bR == 0)
+        printf("Read from queue failed.\n");
 
-    printf("%s", ackMessage->message);
+    printf("messaggio: %i | %ld\n", ackMessage->acks[0].message_id, ackMessage->acks[0].timestamp);
+
+     // Crea la path della FIFO del device
+    char path_output[14] = "out_";
+    char messageid2string[6];
+    sprintf(messageid2string, "%d", message_id);
+    strcat(path_output, messageid2string);
+    strcat(path_output, ".txt");
+    printf("sto creando il file\n");
+    int output_fd = open(path_output, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR, S_IWUSR);
+    if(output_fd==-1)
+        ErrExit("open failed");
+
+
+    char * buffer = "prova";
+ 
+    write(output_fd, buffer, sizeof(buffer));
+    
     return 0;
 }
