@@ -233,6 +233,7 @@ int main(int argc, char *argv[]) {
         ErrExit("change signal handler failed");
 
     int step = 0;
+    int broke;
     while (1) {
         sleep(PACE_TIMER);
 
@@ -245,8 +246,7 @@ int main(int argc, char *argv[]) {
         semOp(semid, SEM_BOARD, -1);
         semOp(semid, SEM_ACK, -1);
         printf("# Step %d: device positions ########################\n", step);
-        
-        int broke;
+           
 
         for (int i = 0; i < 5; i++) {
             broke = 0;
