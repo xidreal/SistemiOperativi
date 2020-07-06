@@ -39,9 +39,8 @@ int shmidBoard;
 int semid;
 
 void signTermHandler(int sig) {
-    printf("<SERVER> Chiusura dei processi figlio...");
+    puts("<SERVER> Chiusura dei processi figlio...");
     
-    /*
     kill(SIGTERM, pid_ackManager);
     
     for(int i = 0; i < 5 ; i++)
@@ -59,8 +58,8 @@ void signTermHandler(int sig) {
 
     // Rimozione semafori 
     remove_semaphore(semid);
-
-    exit(0);*/
+    
+    exit(0);
 }
 
 int main(int argc, char * argv[]) {
@@ -78,7 +77,7 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
 
-    if((msqid = msgget(msg_queue_key, IPC_CREAT | S_IRUSR | S_IWUSR)) == -1)
+    if((msqid = msgget(msg_queue_key, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR)) == -1)
         ErrExit("msgget failed");
 
     printf("MSQID %i ---------------------------------------------\n", msqid);
@@ -99,18 +98,7 @@ int main(int argc, char * argv[]) {
     // Da file a liste di poszioni
     file_to_list(position_pid, file);
 
-    // Imposto il nuovo signal handler
     
-    // set of signals (N.B. it is not initialized!)
-    sigset_t mySet;
-    // blocking all signals but SIGTERM
-    sigfillset(&mySet);
-    sigdelset(&mySet, SIGTERM);
-    sigprocmask(SIG_SETMASK, &mySet, NULL);
-    // set the function sigHandler as handler for the signal SIGTERM
-    if(signal(SIGTERM, signTermHandler) == SIG_ERR)
-      ErrExit("change signal handler failed");
-
     // DEBUG: List position
     #ifdef DEBUG
     Position * current;
@@ -139,7 +127,7 @@ int main(int argc, char * argv[]) {
     AcknowledgeList = (AckList *)get_shared_memory(shmidAcknowledge, 0);
 
     // Crea e inizializza i semafori
-    semid = semget(IPC_CREAT, 7, IPC_CREAT | S_IRUSR | S_IWUSR);
+    semid = semget(IPC_PRIVATE, 7, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
     unsigned short semInitVal[] = {0, 0, 0, 0, 0, 1, 1};
     union semun arg;
     arg.array = semInitVal;
@@ -430,20 +418,20 @@ int main(int argc, char * argv[]) {
             while (AckLstIndex < ACK_LIST_DIM){
                 
                 // Se il messaggio time stamp della riga è diverso da zero, incrementa il contatore di quel message_id
-                if (AcknowledgeList -> Acknowledgment_List[AckLstIndex].timestamp != 0){
+                if (AcknowledgeList->Acknowledgment_List[AckLstIndex].timestamp != 0){
                     // Incrementa contatore della ricezione di quel message_id
-                    int counter = ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].counter++;
+                    int counter = ackManage[AcknowledgeList->Acknowledgment_List[AckLstIndex].message_id].counter++;
                     // Memorizza indice nella tablla 
-                    ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].index[counter] = AckLstIndex;
+                    ackManage[AcknowledgeList->Acknowledgment_List[AckLstIndex].message_id].index[counter] = AckLstIndex;
                     
-                    if (ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].counter == 5){
+                    if (ackManage[AcknowledgeList->Acknowledgment_List[AckLstIndex].message_id].counter == 5){
                         
                         // MARCATURA PER ELIMINAZIONE DA ACKNOWLEDGMENTLIST (impostando timestamp a 0)
                         // E INVIO DELL'ACK SULLA QUEUE
                         ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
                         //mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype);
 
-                        int message_id = AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id;
+                        int message_id = AcknowledgeList->Acknowledgment_List[AckLstIndex].message_id;
                         ackMessage->mtype = message_id;
                         
                         printf("<ACK-MANAGER> Sto eleminando il messaggio. \n");
@@ -452,11 +440,11 @@ int main(int argc, char * argv[]) {
                             
                             int index = ackManage[message_id].index[i];
                             
-                            ackMessage->acks[i] = AcknowledgeList -> Acknowledgment_List[index];
+                            ackMessage->acks[i] = AcknowledgeList->Acknowledgment_List[index];
                             printf("<ACK-MANAGER> Acks: %i | %ld | %i | %i \n", ackMessage->acks[i].message_id,
                             ackMessage->acks[i].timestamp, ackMessage->acks[i].pid_receiver, ackMessage->acks[i].pid_sender );
                             
-                            AcknowledgeList -> Acknowledgment_List[index].timestamp = 0;
+                            AcknowledgeList->Acknowledgment_List[index].timestamp = 0;
                         }
 
                         sorting_date(ackMessage);
@@ -467,7 +455,7 @@ int main(int argc, char * argv[]) {
                             ErrExit("msgsnd failed");
 
                         free(ackMessage);
-                        ackManage[AcknowledgeList -> Acknowledgment_List[AckLstIndex].message_id].counter = 0;
+                        ackManage[AcknowledgeList->Acknowledgment_List[AckLstIndex].message_id].counter = 0;
                     }
                 }
                 AckLstIndex++;
@@ -495,6 +483,18 @@ int main(int argc, char * argv[]) {
         return 0;
     }*/
     
+    // Imposto il nuovo signal handler
+    
+    // set of signals (N.B. it is not initialized!)
+    sigset_t mySet;
+    // blocking all signals but SIGTERM
+    sigfillset(&mySet);
+    sigdelset(&mySet, SIGTERM);
+    sigprocmask(SIG_SETMASK, &mySet, NULL);
+    // set the function sigHandler as handler for the signal SIGTERM
+    if(signal(SIGTERM, signTermHandler) == SIG_ERR)
+      ErrExit("change signal handler failed");
+
     while(1){
         sleep(PACE_TIMER);
         
@@ -524,6 +524,9 @@ int main(int argc, char * argv[]) {
         semOp(semid, SEM_ACK, 1);
 
     }
+
+    
+
 
     return 0;
 }

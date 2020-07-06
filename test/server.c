@@ -25,6 +25,7 @@ typedef struct{
 
 void signTermHandler(int sig) {
     printf("<SERVER> Chiusura dei processi figlio...");
+    fflush(stdout);
 
     // terminate the server process
     exit(0);
@@ -32,21 +33,26 @@ void signTermHandler(int sig) {
 
 int main(int argc, char * argv[]){
 
-    
     // set of signals (N.B. it is not initialized!)
     sigset_t mySet;
     // blocking all signals but SIGTERM
     sigfillset(&mySet);
-    sigdelset(&mySet, SIGTERM);
-    sigprocmask(SIG_SETMASK, &mySet, NULL);
+    sigdelset(&mySet, SIGINT);
+    if (sigprocmask(SIG_SETMASK, &mySet, NULL) == -1)
+        ErrExit("sigprocmask failed");
+
     // set the function sigHandler as handler for the signal SIGTERM
-    if(signal(SIGTERM, signTermHandler) == SIG_ERR)
+    if(signal(SIGINT, signTermHandler) == SIG_ERR)
       ErrExit("change signal handler failed");
 
-
+    printf("da qui dovrebbe stampare");
+    fflush(stdout);
     while(1){
-        sleep(2);
+        
+        sleep(2);   
         printf("%i", getpid());
         printf("1");
+        fflush(stdout);
+        
     }
 }

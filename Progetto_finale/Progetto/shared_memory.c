@@ -9,7 +9,7 @@
 int alloc_shared_memory(key_t shmKey, size_t size) {
     // get, or create, a shared memory segment
     int mem;
-    if((mem = shmget(shmKey, size, IPC_CREAT | S_IRUSR | S_IWUSR)) == -1)
+    if((mem = shmget(shmKey, size, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR)) == -1)
         ErrExit("shmget failed");
 
     return mem;
