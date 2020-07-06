@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <sys/msg.h>
+#include <time.h>
 
 
 #define DEBUG //attiva le stampe di DEBUG
@@ -60,7 +61,7 @@ int main(int argc, char * argv[]) {
 
     // messaggio
     printf("Inserire il testo del messaggio: ");
-    scanf("%s", this_message.message);
+    scanf("%[^\n]", this_message.message);
 
     // message_id
     float max_dist = 0;
@@ -127,14 +128,26 @@ int main(int argc, char * argv[]) {
     strcat(path_output, messageid2string);
     strcat(path_output, ".txt");
     printf("sto creando il file\n");
-    int output_fd = open(path_output, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR, S_IWUSR);
+    int output_fd = open(path_output, O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
     if(output_fd==-1)
         ErrExit("open failed");
-
-
-    char * buffer = "prova";
- 
-    write(output_fd, buffer, sizeof(buffer));
     
+    size_t max_size = sizeof(char)*1024;
+    char * buffer = (char *)malloc(max_size);
+    size_t str_size = snprintf(buffer, max_size, "Messaggio %i: %s\nLista acknowledgement:\n", message_id, this_message.message);
+   
+    write(output_fd, buffer, str_size);
+    char * time_buffer = (char *)malloc(sizeof(char)*26);
+
+    struct tm *tm;
+    
+    for(int i = 0; i < 5; i++){
+        time_t * test = &ackMessage->acks[i].timestamp;
+        tm = localtime(test);
+        strftime(time_buffer, 26, "%Y-%m-%d %H:%M:%S", tm);
+        str_size = snprintf(buffer, max_size, "%i, %i, %s\n", ackMessage->acks[i].pid_sender, ackMessage->acks[i].pid_receiver, time_buffer);
+        write(output_fd, buffer, str_size);
+    }
+    close(output_fd);
     return 0;
 }

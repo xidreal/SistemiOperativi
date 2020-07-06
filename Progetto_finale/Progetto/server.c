@@ -17,6 +17,8 @@
 #include <string.h>
 #include <sys/wait.h>
 #include "server_lib.h" // Funzioni ausiliarie specifiche del server
+#include <signal.h>
+
 
 #define SEM_ACK 5
 #define SEM_BOARD 6
@@ -27,8 +29,39 @@
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
 #define VIEWACKLIST // Visualizza l'acknowledgelist
 
-pid_t pid[5];
+pid_t Device_pid[5];
 Message messages[20];
+pid_t pid_ackManager;
+SharedBoard * Board;
+AckList * AcknowledgeList;
+int shmidAcknowledge;
+int shmidBoard;
+int semid;
+
+void signTermHandler(int sig) {
+    printf("<SERVER> Chiusura dei processi figlio...");
+    
+    /*
+    kill(SIGTERM, pid_ackManager);
+    
+    for(int i = 0; i < 5 ; i++)
+        kill(SIGTERM, Device_pid[i]);
+    
+    // Detach del segmento
+    free_shared_memory(Board);
+
+    // Rimozione della memoria condivisa
+    remove_shared_memory(shmidBoard);
+
+    free_shared_memory(AcknowledgeList);
+
+    remove_shared_memory(shmidAcknowledge);
+
+    // Rimozione semafori 
+    remove_semaphore(semid);
+
+    exit(0);*/
+}
 
 int main(int argc, char * argv[]) {
     
@@ -63,8 +96,20 @@ int main(int argc, char * argv[]) {
         position_pid[i] = (Position *)malloc(sizeof(Position));
     }
     
-    // Da file a liste
+    // Da file a liste di poszioni
     file_to_list(position_pid, file);
+
+    // Imposto il nuovo signal handler
+    
+    // set of signals (N.B. it is not initialized!)
+    sigset_t mySet;
+    // blocking all signals but SIGTERM
+    sigfillset(&mySet);
+    sigdelset(&mySet, SIGTERM);
+    sigprocmask(SIG_SETMASK, &mySet, NULL);
+    // set the function sigHandler as handler for the signal SIGTERM
+    if(signal(SIGTERM, signTermHandler) == SIG_ERR)
+      ErrExit("change signal handler failed");
 
     // DEBUG: List position
     #ifdef DEBUG
@@ -82,19 +127,19 @@ int main(int argc, char * argv[]) {
     #endif
 
     // Crea la memoria condivisa per ospitare la Board
-    int shmidBoard = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * BOARD_DIM * BOARD_DIM) + sizeof(key_t));
-    SharedBoard * Board = (SharedBoard *)get_shared_memory(shmidBoard, 0);
+    shmidBoard = alloc_shared_memory(IPC_PRIVATE, (sizeof(pid_t) * BOARD_DIM * BOARD_DIM) + sizeof(key_t));
+    Board = (SharedBoard *)get_shared_memory(shmidBoard, 0);
 
     // Inizializzo la Board
     for (int i = 0; i < BOARD_DIM; i++)
         for(int j = 0; j < BOARD_DIM; j++)
             Board->Board[i][j] = 0;
     
-    int shmidAcknowledge = alloc_shared_memory(IPC_PRIVATE, (sizeof(Acknowledgment) * ACK_LIST_DIM) + sizeof(key_t));
-    AckList * AcknowledgeList = (AckList *)get_shared_memory(shmidAcknowledge, 0);
+    shmidAcknowledge = alloc_shared_memory(IPC_PRIVATE, (sizeof(Acknowledgment) * ACK_LIST_DIM) + sizeof(key_t));
+    AcknowledgeList = (AckList *)get_shared_memory(shmidAcknowledge, 0);
 
     // Crea e inizializza i semafori
-    int semid = semget(IPC_CREAT, 7, IPC_CREAT | S_IRUSR | S_IWUSR);
+    semid = semget(IPC_CREAT, 7, IPC_CREAT | S_IRUSR | S_IWUSR);
     unsigned short semInitVal[] = {0, 0, 0, 0, 0, 1, 1};
     union semun arg;
     arg.array = semInitVal;
@@ -104,13 +149,13 @@ int main(int argc, char * argv[]) {
     // Creazione dei figli
     
     for(int pid_i = 0; pid_i < 5; pid_i++){
-        pid[pid_i] = fork(); 
-        if (pid[pid_i] == -1){
+        Device_pid[pid_i] = fork(); 
+        if (Device_pid[pid_i] == -1){
             ErrExit("Fork failed");
         }
 
         // Codice del Device i-esimo
-        if (pid[pid_i] == 0){
+        if (Device_pid[pid_i] == 0){
             
             // INIZIALIZZA DEVICE
             
@@ -324,7 +369,7 @@ int main(int argc, char * argv[]) {
                 // STAMPA OUTPUT -------------------------------------------
 
                 // controllo che sial il 1 device per stampare la stringa iniziale
-                if (pid[0] == 0)
+                if (Device_pid[0] == 0)
                     printf("# Step %i: device positions ########################\n", step++);
               
                 
@@ -338,7 +383,7 @@ int main(int argc, char * argv[]) {
                 }
                 
                 // Controllo di che sial il 5 device per stampare la stringa finale altrimenti apro il prossimo semaforo
-                if (pid[0] != 0 && pid[1] != 0 && pid[2] != 0 && pid[3] != 0 && pid[4] == 0){
+                if (Device_pid[0] != 0 && Device_pid[1] != 0 && Device_pid[2] != 0 && Device_pid[3] != 0 && Device_pid[4] == 0){
                     printf("#############################################\n\n");
                 } else 
                     semOp(semid, pid_i+1, 1); // libera il fgilio i + 1 
@@ -360,7 +405,7 @@ int main(int argc, char * argv[]) {
 
     // ACK-MANAGER ------------------------------------------------
 
-    pid_t pid_ackManager = fork();
+    pid_ackManager = fork();
 
     if (pid_ackManager == -1){
         ErrExit("Fork failed");
@@ -479,17 +524,6 @@ int main(int argc, char * argv[]) {
         semOp(semid, SEM_ACK, 1);
 
     }
-
-    
-    // TODO: da gestire in handler
-    // Detach del segmento
-    free_shared_memory(Board);
-    // Rimozione della memoria condivisa
-    remove_shared_memory(shmidBoard);
-
-    // Rimozione semafori 
-    remove_semaphore(semid);
-
 
     return 0;
 }
