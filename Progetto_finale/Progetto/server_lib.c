@@ -15,14 +15,14 @@
 #include <string.h>
 #include <sys/wait.h>
 
-extern pid_t pid[5];
+extern pid_t dev_pid[5];
 
 void test_process(int pid_i, int message_id, int sec){
     
     sleep(sec);
     Message this_message1;
     this_message1.pid_sender = getpid();
-    this_message1.pid_receiver = pid[pid_i];
+    this_message1.pid_receiver = dev_pid[pid_i];
     this_message1.message_id = message_id; // TEST Processo tester
     strcpy( this_message1.message, "char");
     this_message1.max_distance = 1;
