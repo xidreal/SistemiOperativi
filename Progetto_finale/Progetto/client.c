@@ -15,11 +15,11 @@
 #include <sys/msg.h>
 #include <time.h>
 
-
-#define DEBUG //attiva le stampe di DEBUG
+//#define DEBUG //attiva le stampe di DEBUG
 
 int main(int argc, char * argv[]) {
     
+    // Controllo gli argomenti passati
     if (argc != 2){
         printf("Usage: %s msg_queue_key file_posizioni\n", argv[0]);
         ErrExit("Incorrect args value");
@@ -33,7 +33,7 @@ int main(int argc, char * argv[]) {
     printf("MSQID %i ---------------------------------------------\n", msqid);
 
     Message this_message;
-    // Richiesta informazioni
+    // RICHIESTA INFORMAZIONI ------------------------------------------------------
     // Pid sender
     this_message.pid_sender = getpid();
 
@@ -56,14 +56,14 @@ int main(int argc, char * argv[]) {
         getchar();
         if (message_id <= 0 || message_id > 20)
             printf("Inserire un valore compreso tra 1 e 20: ");
-    } while (message_id <= 0);
+    } while (message_id <= 0 || message_id > 20);
     this_message.message_id = message_id;
 
     // messaggio
     printf("Inserire il testo del messaggio: ");
     scanf("%[^\n]", this_message.message);
 
-    // message_id
+    // max_dist
     float max_dist = 0;
     printf("Inserire la distanza di invio del messaggio: ");
     do {
@@ -108,30 +108,34 @@ int main(int argc, char * argv[]) {
     close(deviceFIFO);
 
     AckMessage * ackMessage = (AckMessage *)malloc(sizeof(AckMessage));
-    //size_t mSize = sizeof(ackMessage) - sizeof(ackMessage->mtype); 
     long mtype = message_id;
 
+    #ifdef DEBUG
     printf("Attendo ack %ld\n", mtype);
+    #endif
 
-    int bR = msgrcv(msqid, ackMessage, sizeof(AckMessage), message_id, 0);
+    int bR = msgrcv(msqid, ackMessage, sizeof(AckMessage), mtype, 0);
     if(bR == -1)
         ErrExit("msgsnd failed");
     if(bR == 0)
         printf("Read from queue failed.\n");
 
+    #ifdef DEBUG
     printf("messaggio: %i | %ld\n", ackMessage->acks[0].message_id, ackMessage->acks[0].timestamp);
+    printf("sto creando il file\n");
+    #endif
 
-     // Crea la path della FIFO del device
+    // Crea la path del file di output
     char path_output[14] = "out_";
     char messageid2string[6];
     sprintf(messageid2string, "%d", message_id);
     strcat(path_output, messageid2string);
     strcat(path_output, ".txt");
-    printf("sto creando il file\n");
     int output_fd = open(path_output, O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
     if(output_fd==-1)
         ErrExit("open failed");
     
+    // SRITTURA SU FILE OUTPUT -----------------------------------------------------------------------------
     size_t max_size = sizeof(char)*1024;
     char * buffer = (char *)malloc(max_size);
     size_t str_size = snprintf(buffer, max_size, "Messaggio %i: %s\nLista acknowledgement:\n", message_id, this_message.message);

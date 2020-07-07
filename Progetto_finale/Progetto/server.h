@@ -11,12 +11,11 @@
 #define SEM_ACK 5
 #define SEM_BOARD 6
 
-#define VIEWBOARD      // Visualizza spostamenti sulla board grafica
 #define REPEATPOSITION // Ripete le posizioni dei device invece di fermarsi sull'ultima
-#define VIEWACKLIST    // Visualizza l'acknowledgelist
 
 pid_t dev_pid[5];
 int semid;
+int msqid;
 AckList *AcknowledgeList;
 SharedBoard *Board;
 Position *position_pid[5];

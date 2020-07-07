@@ -10,7 +10,7 @@
 #include <stdio.h>      // print
 #include <sys/stat.h>   // Flag
 #include <fcntl.h>      // Flag
-#include <stdlib.h>     // Malloc
+#include <stdlib.h>     // Malloc.
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>

@@ -27,8 +27,10 @@ void send_message(pid_t pid, Message message){
     message.pid_sender = getpid();
     
     // Crea la FIFO
-    // Apri in sola lettura
+    // Apri in sola scrittura
+    #ifdef DEBUG
     printf("<%i> %s\n", message.pid_sender, path_FIFO);
+    #endif
     if ((fdFIFO = open(path_FIFO, O_WRONLY)) == -1)
         ErrExit("open failed");
     

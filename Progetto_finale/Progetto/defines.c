@@ -63,7 +63,9 @@ void file_to_list(Position * position_pid[], int file){
 
 int message_deliverbale(int x, int y, int i, int j, int distance){
     if (sqrt(pow(x-i, 2) + pow(y-j, 2)) <= distance){
+        #ifdef DEBUG
         printf("Deliverable \n");
+        #endif
         return 1;
     }
     
@@ -71,7 +73,9 @@ int message_deliverbale(int x, int y, int i, int j, int distance){
 }
 
 void print_list(Pid_message * head){
+    #ifdef DEBUG
     printf("<%i> msgs: ", getpid());
+    #endif
     Pid_message * current = head;
     while (current->next != NULL){
         printf("%i ", current->message.message_id);
