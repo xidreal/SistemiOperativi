@@ -39,11 +39,11 @@ int main (int argc, char *argv[]) {
     }
 
     // set of signals (N.B. it is not initialized!)
-    sigset_t mySet;
+    sigset_t mySet, prevSet;
     // blocking all signals but SIGTERM
     sigfillset(&mySet);
     sigdelset(&mySet, SIGTERM);
-    sigprocmask(SIG_SETMASK, &mySet, NULL);
+    sigprocmask(SIG_SETMASK, &mySet, &prevSet);
     // set the function sigHandler as handler for the signal SIGTERM
     if(signal(SIGTERM, signTermHandler) == SIG_ERR)
       errExit("change signal handler failed");

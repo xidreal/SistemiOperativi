@@ -65,6 +65,17 @@ void signTermHandler(int sig) {
 
 int main(int argc, char *argv[]) {
 
+    // Imposto il nuovo signal handler
+    sigset_t mySet;
+    if(sigfillset(&mySet) == -1)
+        ErrExit("sigfillset failed");
+    if(sigdelset(&mySet, SIGTERM)== -1)
+        ErrExit("sigdelset failed");
+    if(sigprocmask(SIG_SETMASK, &mySet, NULL)== -1)
+        ErrExit("sigprocmask failed");
+    if (signal(SIGTERM, signTermHandler) == SIG_ERR)
+        ErrExit("change signal handler failed");
+
     // Controllo argomenti passati
     if (argc != 3) {
         printf("Usage: %s msg_queue_key file_posizioni\n", argv[0]);
@@ -147,17 +158,6 @@ int main(int argc, char *argv[]) {
     if (pid_ackManager == 0) {
         ackmanager(); // codice AckManager
     }
-
-    // Imposto il nuovo signal handler
-    sigset_t mySet;
-    if(sigfillset(&mySet) == -1)
-        ErrExit("sigfillset failed");
-    if(sigdelset(&mySet, SIGTERM)== -1)
-        ErrExit("sigdelset failed");
-    if(sigprocmask(SIG_SETMASK, &mySet, NULL)== -1)
-        ErrExit("sigprocmask failed");
-    if (signal(SIGTERM, signTermHandler) == SIG_ERR)
-        ErrExit("change signal handler failed");
 
     // SERVER --------------------------------------------------------
     int step = 0;
