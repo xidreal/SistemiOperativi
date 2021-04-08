@@ -4,11 +4,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "errExit.h"
+#include <stdlib.h>
 
 // the FIFO pathname
 char *path2ServerFIFO;
 // the file descriptor for the FIFO
 int serverFIFO;
+
+typedef struct test{
+  int a;
+  char b[2];
+} test;
 
 int main (int argc, char *argv[]) {
     // Check command line input arguments
@@ -41,17 +47,18 @@ int main (int argc, char *argv[]) {
     int v [] = {0, 0};
     printf("<Server> waiting for vector [a,b]...\n");
     // Reading 2 integers from the FIFO.
-    
-    int bR = read(serverFIFO, v, sizeof(int)*2);
+    test * prova = (test *) malloc (sizeof(test));
+
+    int bR = read(serverFIFO, prova, sizeof(test));
 
     // Checking the number of bytes from the FIFO
     if (bR == -1)
         printf("<Server> it looks like the FIFO is broken");
-    if (bR != sizeof(int)*2)
+    if (bR != sizeof(test))
         printf("<Server> it looks like I did not receive 2 numbers");
     else
-        printf("<Server> %d is %s %d\n", v[0],
-        (v[0] < v[1])? "lower than" : "greater/equals to", v[1]);
+        printf("<Server> %i %s \n", prova->a, prova->b);
+        //(v[0] < v[1])? "lower than" : "greater/equals to", v[1]);
 
     sleep(60);
     // Close the FIFO
