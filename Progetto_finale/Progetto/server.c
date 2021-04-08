@@ -36,7 +36,7 @@ void signTermHandler(int sig) {
     #ifdef DEBUG
     puts("<SERVER> Chiusura dei processi figlio...");
     #endif 
-
+    
     // Terminazione dell'ackmanager
     kill(SIGTERM, pid_ackManager);
     
